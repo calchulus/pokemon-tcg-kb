@@ -336,43 +336,70 @@ document.getElementById('searchInput').addEventListener('input', e => {
     currentSet = null;
     currentPage = 1;
     const safe = q.replace(/'/g, "''");
-    const countQ = db.exec(`SELECT COUNT(*) FROM cards WHERE card_name LIKE '%${safe}%'`)[0].values[0][0];
-
-    let html = `<div class="back-btn" onclick="document.getElementById('searchInput').value='';showSets()">← Back to Sets</div>`;
-    html += `<div class="set-header"><h2>Search: "${esc(q)}"</h2><div class="meta"><span>${countQ} results</span></div></div>`;
-    html += `<div class="sort-bar">
-      <label>Sort:</label>
-      <select id="sortSelect" onchange="currentPage=1;renderSearch('${safe}')">
-        <option value="price_desc">Price: High → Low</option>
-        <option value="price_asc">Price: Low → High</option>
-        <option value="name">Name</option>
-      </select>
-      <span class="result-count" id="resultCount"></span>
-    </div>`;
-    html += `<div class="card-grid" id="cardGrid"></div>`;
-    html += `<div class="pagination" id="pagination"></div>`;
-    document.getElementById('app').innerHTML = html;
-    renderSearch(safe);
+    renderSearch(safe, q);
   }, 300);
 });
 
-function renderSearch(q) {
-  const sort = document.getElementById('sortSelect').value;
+function renderSearch(q, displayQ) {
+  if (!displayQ) displayQ = q;
+  const sort = document.getElementById('sortSelect')?.value || 'price_desc';
   const sortMap = {
     price_desc: 'COALESCE(price_raw_usd,0) DESC',
     price_asc: 'CASE WHEN price_raw_usd IS NULL THEN 1 ELSE 0 END, price_raw_usd ASC',
     name: 'card_name',
   };
-  const countQ = db.exec(`SELECT COUNT(*) FROM cards WHERE card_name LIKE '%${q}%'`)[0].values[0][0];
-  const totalPages = Math.ceil(countQ / PAGE_SIZE);
-  const offset = (currentPage - 1) * PAGE_SIZE;
 
+  // Search sets
+  const matchedSets = db.exec(`SELECT set_code, set_name_en, set_name_cn, release_date, card_count, total_value_usd FROM sets WHERE set_name_en LIKE '%${q}%' OR set_name_cn LIKE '%${q}%' OR set_code LIKE '%${q}%' ORDER BY release_date DESC`);
+
+  // Search cards
+  const cardCount = db.exec(`SELECT COUNT(*) FROM cards WHERE card_name LIKE '%${q}%'`)[0].values[0][0];
+  const totalPages = Math.ceil(cardCount / PAGE_SIZE);
+  const offset = (currentPage - 1) * PAGE_SIZE;
   const cards = db.exec(`SELECT card_uuid, card_name, card_number, set_code, price_raw_usd FROM cards WHERE card_name LIKE '%${q}%' ORDER BY ${sortMap[sort]} LIMIT ${PAGE_SIZE} OFFSET ${offset}`);
 
-  document.getElementById('resultCount').textContent = `${countQ} results`;
+  const setCount = matchedSets.length ? matchedSets[0].values.length : 0;
+  const totalResults = setCount + cardCount;
+
+  let html = `<div class="back-btn" onclick="document.getElementById('searchInput').value='';showSets()">← Back to Sets</div>`;
+  html += `<div class="set-header"><h2>Search: "${esc(displayQ)}"</h2><div class="meta"><span>${setCount} sets · ${cardCount.toLocaleString()} cards</span></div></div>`;
+
+  // Render matching sets
+  if (setCount > 0) {
+    html += `<h3 style="font-size:14px;color:var(--muted);margin-bottom:10px">SETS</h3>`;
+    html += `<div class="set-grid" style="margin-bottom:24px">${matchedSets[0].values.map(r => {
+      const [code, name, cn, date, count, value] = r;
+      const valueStr = value ? `$${parseFloat(value).toLocaleString(undefined,{minimumFractionDigits:2})}` : '—';
+      return `<div class="set-card" onclick="openSet('${code}')">
+        <div class="set-name">${esc(name)}</div>
+        <div class="set-cn">${esc(cn||'')}</div>
+        <div class="set-meta">
+          <span>${date}</span>
+          <span>${count} cards</span>
+          <span class="value">${valueStr}</span>
+        </div>
+      </div>`;
+    }).join('')}</div>`;
+  }
+
+  // Render matching cards
+  html += `<h3 style="font-size:14px;color:var(--muted);margin-bottom:10px">CARDS</h3>`;
+  html += `<div class="sort-bar">
+    <label>Sort:</label>
+    <select id="sortSelect" onchange="currentPage=1;renderSearch('${q}','${esc(displayQ).replace(/'/g,"\\'")}')">
+      <option value="price_desc" ${sort==='price_desc'?'selected':''}>Price: High → Low</option>
+      <option value="price_asc" ${sort==='price_asc'?'selected':''}>Price: Low → High</option>
+      <option value="name" ${sort==='name'?'selected':''}>Name</option>
+    </select>
+    <span class="result-count" id="resultCount">${cardCount.toLocaleString()} cards</span>
+  </div>`;
+  html += `<div class="card-grid" id="cardGrid"></div>`;
+  html += `<div class="pagination" id="pagination"></div>`;
+
+  document.getElementById('app').innerHTML = html;
 
   if (!cards.length || !cards[0].values.length) {
-    document.getElementById('cardGrid').innerHTML = '<div class="empty"><p>No cards found</p></div>';
+    document.getElementById('cardGrid').innerHTML = setCount > 0 ? '' : '<div class="empty"><p>No cards found</p></div>';
     document.getElementById('pagination').innerHTML = '';
     return;
   }
@@ -396,15 +423,15 @@ function renderSearch(q) {
 
   let pag = '';
   if (totalPages > 1) {
-    pag += `<button ${currentPage===1?'disabled':''} onclick="currentPage=1;renderSearch('${q}')">«</button>`;
-    pag += `<button ${currentPage===1?'disabled':''} onclick="currentPage--;renderSearch('${q}')">‹</button>`;
+    pag += `<button ${currentPage===1?'disabled':''} onclick="currentPage=1;renderSearch('${q}','${esc(displayQ).replace(/'/g,"\\'")}')">«</button>`;
+    pag += `<button ${currentPage===1?'disabled':''} onclick="currentPage--;renderSearch('${q}','${esc(displayQ).replace(/'/g,"\\'")}')">‹</button>`;
     const start = Math.max(1, currentPage - 2);
     const end = Math.min(totalPages, currentPage + 2);
     for (let i = start; i <= end; i++) {
-      pag += `<button class="${i===currentPage?'active':''}" onclick="currentPage=${i};renderSearch('${q}')">${i}</button>`;
+      pag += `<button class="${i===currentPage?'active':''}" onclick="currentPage=${i};renderSearch('${q}','${esc(displayQ).replace(/'/g,"\\'")}')">${i}</button>`;
     }
-    pag += `<button ${currentPage===totalPages?'disabled':''} onclick="currentPage++;renderSearch('${q}')">›</button>`;
-    pag += `<button ${currentPage===totalPages?'disabled':''} onclick="currentPage=${totalPages};renderSearch('${q}')">»</button>`;
+    pag += `<button ${currentPage===totalPages?'disabled':''} onclick="currentPage++;renderSearch('${q}','${esc(displayQ).replace(/'/g,"\\'")}')">›</button>`;
+    pag += `<button ${currentPage===totalPages?'disabled':''} onclick="currentPage=${totalPages};renderSearch('${q}','${esc(displayQ).replace(/'/g,"\\'")}')">»</button>`;
   }
   document.getElementById('pagination').innerHTML = pag;
 }
