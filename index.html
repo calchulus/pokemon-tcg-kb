@@ -3,14 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pokemon TCG Knowledge Base — Simplified Chinese</title>
+<title>Pokemon TCG Mega Knowledge Base</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#0f0f13;--card:#1a1a24;--border:#2a2a3a;--text:#e0e0e8;--muted:#888899;--accent:#6366f1;--accent2:#818cf8;--green:#22c55e;--red:#ef4444;--gold:#eab308}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-a{color:var(--accent2);text-decoration:none}
-a:hover{text-decoration:underline}
+a{color:var(--accent2);text-decoration:none}a:hover{text-decoration:underline}
 
 .header{background:var(--card);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;position:sticky;top:0;z-index:100}
 .header h1{font-size:20px;font-weight:700;white-space:nowrap}
@@ -29,58 +28,32 @@ a:hover{text-decoration:underline}
 .tab{padding:6px 14px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:13px;font-weight:500;transition:all .2s;white-space:nowrap}
 .tab:hover{border-color:var(--accent);color:var(--text)}
 .tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-.tab .count{font-size:10px;opacity:.6;margin-left:4px}
+.tab .cnt{font-size:10px;opacity:.6;margin-left:4px}
 
 .set-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
 .set-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:all .2s}
 .set-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 4px 20px rgba(99,102,241,.15)}
-.set-card .set-name{font-weight:600;font-size:15px;margin-bottom:4px}
-.set-card .set-cn{font-size:12px;color:var(--muted);margin-bottom:8px}
-.set-card .set-meta{display:flex;gap:12px;font-size:12px;color:var(--muted)}
-.set-card .set-meta .value{color:var(--green);font-weight:600}
+.set-card .sname{font-weight:600;font-size:15px;margin-bottom:4px}
+.set-card .smeta{display:flex;gap:12px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.set-card .lang-badge{display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;text-transform:uppercase}
+.lang-en{background:rgba(99,102,241,.2);color:var(--accent2)}
+.lang-cn{background:rgba(239,68,68,.2);color:var(--red)}
 
-.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
-.card-item{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:all .2s}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.card-item{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:all .2s;cursor:pointer}
 .card-item:hover{border-color:var(--accent);transform:translateY(-2px)}
-.card-img-wrap{aspect-ratio:200/277;background:#111;position:relative;overflow:hidden}
-.card-img-wrap img{width:100%;height:100%;object-fit:cover}
-.card-img-wrap img.loading{opacity:0}
-.card-img-wrap img.loaded{opacity:1;transition:opacity .3s}
+.card-img{aspect-ratio:200/277;background:#111;overflow:hidden}
+.card-img img{width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .3s}
+.card-img img.ok{opacity:1}
 .card-info{padding:10px 12px}
-.card-info .name{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.card-info .meta{font-size:11px;color:var(--muted);margin-top:2px}
-.card-info .price{font-size:14px;font-weight:700;color:var(--green);margin-top:4px}
-.card-info .price.na{color:var(--muted);font-weight:400}
-
-.detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
-.detail-overlay.open{display:flex}
-.detail-panel{background:var(--card);border:1px solid var(--border);border-radius:16px;max-width:700px;width:100%;max-height:90vh;overflow-y:auto;position:relative}
-.detail-close{position:absolute;top:12px;right:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;width:32px;height:32px;color:var(--text);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;z-index:10}
-.detail-close:hover{border-color:var(--accent)}
-.detail-body{display:flex;gap:24px;padding:24px;flex-wrap:wrap}
-.detail-img{flex:0 0 220px}
-.detail-img img{width:100%;border-radius:12px}
-.detail-info{flex:1;min-width:200px}
-.detail-info h2{font-size:22px;font-weight:700;margin-bottom:4px}
-.detail-info .cn{font-size:14px;color:var(--muted);margin-bottom:12px}
-.detail-info .field{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px}
-.detail-info .field .label{color:var(--muted)}
-.detail-info .field .val{font-weight:600}
-.detail-info .field .val.price{color:var(--green);font-size:18px}
-.detail-info .ebay-link{display:inline-block;margin-top:16px;padding:10px 20px;background:var(--accent);color:#fff;border-radius:8px;font-weight:600;font-size:14px}
-.detail-info .ebay-link:hover{background:var(--accent2);text-decoration:none}
-
-.loading-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;gap:16px}
-.loading-screen .spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.loading-screen p{color:var(--muted);font-size:14px}
+.card-info .cname{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-info .cmeta{font-size:11px;color:var(--muted);margin-top:2px}
+.card-info .cprice{font-size:14px;font-weight:700;color:var(--green);margin-top:4px}
+.card-info .cprice.na{color:var(--muted);font-weight:400}
+.card-info .crarity{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;background:rgba(234,179,8,.15);color:var(--gold);margin-top:4px}
 
 .back-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;cursor:pointer;margin-bottom:16px}
 .back-btn:hover{border-color:var(--accent)}
-.set-header{margin-bottom:20px}
-.set-header h2{font-size:24px;font-weight:700}
-.set-header .cn{font-size:14px;color:var(--muted)}
-.set-header .meta{display:flex;gap:16px;font-size:13px;color:var(--muted);margin-top:8px}
 
 .sort-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
 .sort-bar label{font-size:13px;color:var(--muted)}
@@ -96,555 +69,371 @@ a:hover{text-decoration:underline}
 .pagination button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 .pagination button:disabled{opacity:.4;cursor:default}
 
+.detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.detail-overlay.open{display:flex}
+.detail-panel{background:var(--card);border:1px solid var(--border);border-radius:16px;max-width:700px;width:100%;max-height:90vh;overflow-y:auto;position:relative}
+.detail-close{position:absolute;top:12px;right:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;width:32px;height:32px;color:var(--text);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;z-index:10}
+.detail-close:hover{border-color:var(--accent)}
+.detail-body{display:flex;gap:24px;padding:24px;flex-wrap:wrap}
+.detail-img{flex:0 0 220px}
+.detail-img img{width:100%;border-radius:12px}
+.detail-info{flex:1;min-width:200px}
+.detail-info h2{font-size:22px;font-weight:700;margin-bottom:4px}
+.detail-info .field{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px}
+.detail-info .field .label{color:var(--muted)}
+.detail-info .field .val{font-weight:600}
+.detail-info .field .val.price{color:var(--green);font-size:18px}
+.detail-info .ebay-link{display:inline-block;margin-top:16px;padding:10px 20px;background:var(--accent);color:#fff;border-radius:8px;font-weight:600;font-size:14px}
+.detail-info .ebay-link:hover{background:var(--accent2);text-decoration:none}
+.psa-bar{display:flex;gap:2px;align-items:flex-end;height:60px;margin-top:8px}
+.psa-bar .grade-col{flex:1;background:var(--border);border-radius:3px 3px 0 0;position:relative;display:flex;flex-direction:column;justify-content:flex-end;align-items:center}
+.psa-bar .grade-col .bar{width:100%;background:var(--accent);border-radius:3px 3px 0 0;min-height:2px}
+.psa-bar .grade-col span{font-size:8px;color:var(--muted);margin-top:2px}
+
+.loading-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;gap:16px}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.section-title{font-size:14px;color:var(--muted);margin:20px 0 10px;font-weight:600}
+
 @media(max-width:600px){
-  .header{padding:12px 16px}
-  .container{padding:12px}
-  .detail-body{flex-direction:column;padding:16px}
-  .detail-img{flex:none}
-  .set-grid{grid-template-columns:1fr}
-  .card-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .header{padding:12px 16px}.container{padding:12px}
+  .detail-body{flex-direction:column;padding:16px}.detail-img{flex:none}
+  .set-grid{grid-template-columns:1fr}.card-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
 }
 </style>
 </head>
 <body>
-
 <div class="header">
-  <h1>Pokemon TCG <span>Knowledge Base</span></h1>
-  <div class="search-box">
-    <input type="text" id="searchInput" placeholder="Search cards by name... (e.g. Pikachu, Sylveon ex)">
-  </div>
+  <h1>Pokemon TCG <span>Mega KB</span></h1>
+  <div class="search-box"><input type="text" id="searchInput" placeholder="Search cards, sets, Pokemon... (e.g. Pikachu ex, Base Set, 234)"></div>
   <div class="stats" id="stats"></div>
 </div>
-
 <div class="container" id="app">
-  <div class="loading-screen" id="loading">
-    <div class="spinner"></div>
-    <p>Loading database...</p>
-  </div>
+  <div class="loading-screen" id="loading"><div class="spinner"></div><p>Loading 42K+ cards from unified database...</p></div>
 </div>
-
 <div class="detail-overlay" id="detailOverlay" onclick="if(event.target===this)closeDetail()">
   <div class="detail-panel" id="detailPanel"></div>
 </div>
 
 <script>
-let db = null;
-let currentView = 'sets';
-let currentEra = 'all';
-let currentSet = null;
-let currentPage = 1;
-let activeFilter = { category: 'era', value: 'all' };
-const PAGE_SIZE = 60;
-
-async function init() {
-  try {
-    const SQL = await initSqlJs({ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${f}` });
-    const resp = await fetch('pokemon_kb.db');
-    const buf = await resp.arrayBuffer();
-    db = new SQL.Database(new Uint8Array(buf));
-    updateStats();
-    showSets();
-  } catch(e) {
-    document.getElementById('loading').innerHTML = `<div class="empty"><p>Failed to load database</p><p style="font-size:13px">${e.message}</p></div>`;
-  }
+let db=null,activeFilter={cat:'all',val:'all'},currentPage=1,view='home';const PS=60;
+async function init(){
+  try{const S=await initSqlJs({locateFile:f=>`https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${f}`});
+  const r=await fetch('pokemon_kb.db');const b=await r.arrayBuffer();db=new S.Database(new Uint8Array(b));
+  updStats();showHome();}catch(e){document.getElementById('loading').innerHTML=`<div class="empty"><p>Failed to load</p><p style="font-size:13px">${e.message}</p></div>`}
 }
-
-function updateStats() {
-  const sets = db.exec("SELECT COUNT(*) FROM sets")[0].values[0][0];
-  const cards = db.exec("SELECT COUNT(*) FROM cards")[0].values[0][0];
-  const priced = db.exec("SELECT COUNT(*) FROM cards WHERE price_raw_usd IS NOT NULL")[0].values[0][0];
-  document.getElementById('stats').textContent = `${sets} sets · ${cards.toLocaleString()} cards · ${priced.toLocaleString()} priced`;
+function updStats(){
+  const s=db.exec("SELECT COUNT(*) FROM sets")[0].values[0][0];
+  const c=db.exec("SELECT COUNT(*) FROM cards")[0].values[0][0];
+  const p=db.exec("SELECT COUNT(DISTINCT card_id) FROM prices")[0].values[0][0];
+  const r=db.exec("SELECT COUNT(*) FROM cards WHERE rarity IS NOT NULL AND rarity!=''")[0].values[0][0];
+  document.getElementById('stats').textContent=`${s} sets · ${c.toLocaleString()} cards · ${r.toLocaleString()} with rarity · ${p.toLocaleString()} priced`;
 }
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
 
-function showSets() {
-  currentView = 'sets';
-  currentSet = null;
-  currentPage = 1;
+function showHome(){
+  view='home';activeFilter={cat:'all',val:'all'};currentPage=1;
+  const q=s=>db.exec(s)[0].values;
+  const eraC={};q("SELECT language,COUNT(*) FROM sets GROUP BY language").forEach(r=>{eraC[r[0]]=r[1]});
+  const langC={};q("SELECT source,COUNT(*) FROM cards GROUP BY source").forEach(r=>{langC[r[0]]=r[1]});
+  const rarC={};q("SELECT rarity,COUNT(*) FROM cards WHERE rarity IS NOT NULL AND rarity!='' GROUP BY rarity ORDER BY COUNT(*) DESC LIMIT 10").forEach(r=>{rarC[r[0]]=r[1]});
+  const priceC={};q("SELECT CASE WHEN p.price_usd>=500 THEN '500+' WHEN p.price_usd>=100 THEN '100+' WHEN p.price_usd>=50 THEN '50+' WHEN p.price_usd>=10 THEN '10+' ELSE '1+' END, COUNT(*) FROM prices p GROUP BY 1 ORDER BY MIN(p.price_usd) DESC").forEach(r=>{priceC[r[0]]=r[1]});
 
-  // Pre-compute counts for filter tabs
-  const eraCounts = { all: 0 };
-  db.exec("SELECT set_code, release_date FROM sets").values.forEach(r => {
-    eraCounts.all++;
-    const d = r[1];
-    const era = d >= '2025/01/01' ? 'sv' : d >= '2023/05/01' ? 'ss' : 'sm';
-    eraCounts[era] = (eraCounts[era]||0) + 1;
+  let h='';
+  // Language
+  h+=`<div class="filter-section"><div class="filter-label">Language</div><div class="tabs">`;
+  h+=mkTab('lang','all','All',eraC.en+eraC['zh-CN']||0);
+  h+=mkTab('lang','en','English',eraC.en||0);
+  h+=mkTab('lang','zh-CN','Chinese',eraC['zh-CN']||0);
+  h+=`</div></div>`;
+  // Source
+  h+=`<div class="filter-section"><div class="filter-label">Source</div><div class="tabs">`;
+  h+=mkTab('src','all','All',Object.values(langC).reduce((a,b)=>a+b,0));
+  [['tcgdex','TCGDex'],['tcgdex+csv','TCGDex+CSV'],['pokemon-card-csv','TradingCardDex'],['pikaqian','PikaQian (CN)'],['gem-pack-vol2','Gem Pack']].forEach(([k,v])=>{
+    if(langC[k])h+=mkTab('src',k,v,langC[k]);
   });
-
-  const pokemonFamilies = db.exec(`SELECT card_name, COUNT(*) as cnt FROM cards GROUP BY card_name ORDER BY cnt DESC`).values;
-  const topPokemon = [];
-  const seen = new Set();
-  for (const [name, cnt] of pokemonFamilies) {
-    const base = name.replace(/ (ex|VMAX|VSTAR|V|GX|Prime|Legend|Master Ball Holo|Pokeball Holo)$/,'');
-    if (!seen.has(base) && !['Energy','Switch','Professor','Ultra','Nest','Great','Quick','Potion','Boss','Marnie','Escape','Evolution','Rare','Master','Poké','Pokemon','Family','Battle','Colorless','Double','Single','Super','Judge','Youngster','Nemona','Ball','Retrieval','Communication','Research','Avery','Korrina','Tierno','Hau','Cheren','Roxie','Peonia','Marnie\'s','Professor\'s'].includes(base)) {
-      seen.add(base);
-      topPokemon.push({ name: base, count: cnt });
-    }
-    if (topPokemon.length >= 12) break;
-  }
-
-  const typeCounts = {};
-  db.exec("SELECT card_name FROM cards").values.forEach(([n]) => {
-    if (n.endsWith(' ex')) typeCounts['ex'] = (typeCounts['ex']||0)+1;
-    else if (n.endsWith(' VMAX')) typeCounts['VMAX'] = (typeCounts['VMAX']||0)+1;
-    else if (n.endsWith(' VSTAR')) typeCounts['VSTAR'] = (typeCounts['VSTAR']||0)+1;
-    else if (n.endsWith(' V') && !n.endsWith(' PV')) typeCounts['V'] = (typeCounts['V']||0)+1;
-    else if (n.endsWith(' GX')) typeCounts['GX'] = (typeCounts['GX']||0)+1;
-    else if (n.includes('Master Ball Holo')) typeCounts['Master Ball'] = (typeCounts['Master Ball']||0)+1;
-    else if (n.includes('Pokeball Holo')) typeCounts['Pokeball'] = (typeCounts['Pokeball']||0)+1;
-    else typeCounts['Regular'] = (typeCounts['Regular']||0)+1;
+  h+=`</div></div>`;
+  // Rarity
+  h+=`<div class="filter-section"><div class="filter-label">Rarity</div><div class="tabs">`;
+  h+=mkTab('rar','all','All',Object.values(rarC).reduce((a,b)=>a+b,0));
+  Object.entries(rarC).forEach(([k,v])=>{h+=mkTab('rar',k,k,v)});
+  h+=`</div></div>`;
+  // Price
+  h+=`<div class="filter-section"><div class="filter-label">Price (USD)</div><div class="tabs">`;
+  h+=mkTab('price','all','All',Object.values(priceC).reduce((a,b)=>a+b,0));
+  [['500+','$500+'],['100+','$100+'],['50+','$50+'],['10+','$10+'],['1+','$1+']].forEach(([k,v])=>{
+    if(priceC[k])h+=mkTab('price',k,v,priceC[k]);
   });
-
-  const priceRanges = { '500+': 0, '100+': 0, '50+': 0, '10+': 0, '1+': 0 };
-  db.exec("SELECT price_raw_usd FROM cards WHERE price_raw_usd IS NOT NULL").values.forEach(([p]) => {
-    if (p >= 500) priceRanges['500+']++;
-    if (p >= 100) priceRanges['100+']++;
-    if (p >= 50) priceRanges['50+']++;
-    if (p >= 10) priceRanges['10+']++;
-    if (p >= 1) priceRanges['1+']++;
-  });
-
-  const multiSetCounts = {};
-  db.exec("SELECT card_name, COUNT(DISTINCT set_code) as sc FROM cards GROUP BY card_name").values.forEach(([n,c]) => {
-    if (c >= 10) multiSetCounts['10+'] = (multiSetCounts['10+']||0)+1;
-    if (c >= 5) multiSetCounts['5+'] = (multiSetCounts['5+']||0)+1;
-    if (c >= 3) multiSetCounts['3+'] = (multiSetCounts['3+']||0)+1;
-  });
-
-  const af = activeFilter;
-  let html = '';
-
-  // Era filters
-  html += `<div class="filter-section"><div class="filter-label">Era</div><div class="tabs">`;
-  [['all','All',eraCounts.all],['sv','Scarlet & Violet',eraCounts.sv],['ss','Sword & Shield',eraCounts.ss],['sm','Sun & Moon',eraCounts.sm]].forEach(([id,label,cnt]) => {
-    html += `<div class="tab ${af.category==='era'&&af.value===id?'active':''}" onclick="setFilter('era','${id}')">${label}<span class="count">${cnt}</span></div>`;
-  });
-  html += `</div></div>`;
-
-  // Pokemon filters
-  html += `<div class="filter-section"><div class="filter-label">Pokemon</div><div class="tabs">`;
-  html += `<div class="tab ${af.category==='pokemon'&&af.value==='all'?'active':''}" onclick="setFilter('pokemon','all')">All</div>`;
-  topPokemon.forEach(({name, count}) => {
-    html += `<div class="tab ${af.category==='pokemon'&&af.value===name?'active':''}" onclick="setFilter('pokemon','${name}')">${name}<span class="count">${count}</span></div>`;
-  });
-  html += `</div></div>`;
-
-  // Card type filters
-  html += `<div class="filter-section"><div class="filter-label">Card Type</div><div class="tabs">`;
-  html += `<div class="tab ${af.category==='type'&&af.value==='all'?'active':''}" onclick="setFilter('type','all')">All</div>`;
-  [['ex',typeCounts.ex],['V',typeCounts.V],['VMAX',typeCounts.VMAX],['VSTAR',typeCounts.VSTAR],['GX',typeCounts.GX],['Master Ball',typeCounts['Master Ball']],['Pokeball',typeCounts.Pokeball],['Regular',typeCounts.Regular]].forEach(([t,c]) => {
-    if (c) html += `<div class="tab ${af.category==='type'&&af.value===t?'active':''}" onclick="setFilter('type','${t}')">${t}<span class="count">${c}</span></div>`;
-  });
-  html += `</div></div>`;
-
-  // Price filters
-  html += `<div class="filter-section"><div class="filter-label">Price (USD)</div><div class="tabs">`;
-  html += `<div class="tab ${af.category==='price'&&af.value==='all'?'active':''}" onclick="setFilter('price','all')">All</div>`;
-  [['500+','$500+',priceRanges['500+']],['100+','$100+',priceRanges['100+']],['50+','$50+',priceRanges['50+']],['10+','$10+',priceRanges['10+']],['1+','$1+',priceRanges['1+']]].forEach(([v,l,c]) => {
-    if (c) html += `<div class="tab ${af.category==='price'&&af.value===v?'active':''}" onclick="setFilter('price','${v}')">${l}<span class="count">${c}</span></div>`;
-  });
-  html += `</div></div>`;
-
-  // Multi-set filters
-  html += `<div class="filter-section"><div class="filter-label">Multi-Set Appearances</div><div class="tabs">`;
-  html += `<div class="tab ${af.category==='multi'&&af.value==='all'?'active':''}" onclick="setFilter('multi','all')">All</div>`;
-  [['10+','10+ sets',multiSetCounts['10+']],['5+','5+ sets',multiSetCounts['5+']],['3+','3+ sets',multiSetCounts['3+']]].forEach(([v,l,c]) => {
-    if (c) html += `<div class="tab ${af.category==='multi'&&af.value===v?'active':''}" onclick="setFilter('multi','${v}')">${l}<span class="count">${c}</span></div>`;
-  });
-  html += `</div></div>`;
-
-  html += `<div style="height:8px"></div>`;
-  html += `<div id="filterResults"></div>`;
-  document.getElementById('app').innerHTML = html;
-  renderFilterResults();
+  h+=`</div></div>`;
+  // PSA
+  h+=`<div class="filter-section"><div class="filter-label">PSA Graded</div><div class="tabs">`;
+  h+=mkTab('psa','all','All',db.exec("SELECT COUNT(*) FROM psa_grades")[0].values[0][0]);
+  h+=mkTab('psa','yes','Has PSA Data',db.exec("SELECT COUNT(*) FROM psa_grades WHERE total_graded>0")[0].values[0][0]);
+  h+=`</div></div>`;
+  h+=`<div style="height:8px"></div><div id="filterOut"></div>`;
+  document.getElementById('app').innerHTML=h;
+  renderHome();
 }
+function mkTab(cat,val,label,cnt){return`<div class="tab ${activeFilter.cat===cat&&activeFilter.val===val?'active':''}" onclick="setF('${cat}','${val}')">${esc(label)}<span class="cnt">${typeof cnt==='number'?cnt.toLocaleString():''}</span></div>`}
+function setF(cat,val){activeFilter={cat,val};currentPage=1;showHome()}
 
-function setFilter(category, value) {
-  activeFilter = { category, value };
-  currentPage = 1;
-  showSets();
-}
+function renderHome(){
+  const af=activeFilter;let w=[];
+  if(af.cat==='lang'&&af.val!=='all')w.push(`s.language='${af.val}'`);
+  if(af.cat==='src'&&af.val!=='all')w.push(`c.source='${af.val}'`);
+  if(af.cat==='rar'&&af.val!=='all')w.push(`c.rarity='${af.val.replace(/'/g,"''")}'`);
+  if(af.cat==='price'&&af.val!=='all'){
+    const mn=parseInt(af.val);w.push(`p.price_usd>=${mn}`);
+  }
+  if(af.cat==='psa'&&af.val==='yes')w.push(`pg.card_id IS NOT NULL`);
 
-function renderFilterResults() {
-  const af = activeFilter;
-  let cardWhere = [];
-  let setWhere = [];
-  let showCards = false;
-  let showSetsSection = false;
-  let groupByCard = false;
+  let join=`FROM cards c JOIN sets s ON c.set_id=s.set_id`;
+  if(af.cat==='price')join+=` JOIN prices p ON c.card_id=p.card_id`;
+  if(af.cat==='psa')join+=` LEFT JOIN psa_grades pg ON c.card_id=pg.card_id`;
 
-  // Era filter
-  if (af.category === 'era' && af.value !== 'all') {
-    const dateFilter = af.value === 'sv' ? ">= '2025/01/01'" : af.value === 'ss' ? ">= '2023/05/01' AND s.release_date < '2025/01/01'" : "< '2023/05/01'";
-    setWhere.push(`s.release_date ${dateFilter}`);
-    cardWhere.push(`s.release_date ${dateFilter}`);
-    showSetsSection = true;
-  } else if (af.category === 'era' && af.value === 'all') {
-    showSetsSection = true;
+  const where=w.length?'WHERE '+w.join(' AND '):'';
+  const countQ=db.exec(`SELECT COUNT(DISTINCT c.card_id) ${join} ${where}`)[0].values[0][0];
+  const tp=Math.ceil(countQ/PS),off=(currentPage-1)*PS;
+
+  let q=`SELECT DISTINCT c.card_id, c.name, c.local_id, c.rarity, c.image_url, c.source, s.name as sname, s.language, s.set_id`;
+  if(af.cat==='price')q+=`, p.price_usd`;
+  q+=` ${join} ${where} ORDER BY `;
+  if(af.cat==='price')q+=`p.price_usd DESC`;
+  else q+=`s.release_date DESC, CAST(c.local_id AS INTEGER)`;
+  q+=` LIMIT ${PS} OFFSET ${off}`;
+
+  const cards=db.exec(q);
+  const el=document.getElementById('filterOut');
+  let h=`<div class="section-title">CARDS (${countQ.toLocaleString()})</div>`;
+  h+=`<div class="card-grid" id="cardGrid"></div><div class="pagination" id="pagination"></div>`;
+  el.innerHTML=h;
+
+  if(!cards.length||!cards[0].values.length){
+    document.getElementById('cardGrid').innerHTML='<div class="empty"><p>No cards match this filter</p></div>';
+    document.getElementById('pagination').innerHTML='';return;
   }
 
-  // Pokemon filter
-  if (af.category === 'pokemon' && af.value !== 'all') {
-    const name = af.value.replace(/'/g, "''");
-    cardWhere.push(`c.card_name LIKE '${name}%'`);
-    showCards = true;
-  }
-
-  // Type filter
-  if (af.category === 'type' && af.value !== 'all') {
-    const t = af.value;
-    if (t === 'ex') cardWhere.push("c.card_name LIKE '% ex'");
-    else if (t === 'VMAX') cardWhere.push("c.card_name LIKE '% VMAX'");
-    else if (t === 'VSTAR') cardWhere.push("c.card_name LIKE '% VSTAR'");
-    else if (t === 'V') cardWhere.push("c.card_name LIKE '% V' AND c.card_name NOT LIKE '% VMAX' AND c.card_name NOT LIKE '% VSTAR'");
-    else if (t === 'GX') cardWhere.push("c.card_name LIKE '% GX'");
-    else if (t === 'Master Ball') cardWhere.push("c.card_name LIKE '%Master Ball Holo'");
-    else if (t === 'Pokeball') cardWhere.push("c.card_name LIKE '%Pokeball Holo'");
-    else if (t === 'Regular') cardWhere.push("c.card_name NOT LIKE '% ex' AND c.card_name NOT LIKE '% VMAX' AND c.card_name NOT LIKE '% VSTAR' AND c.card_name NOT LIKE '% V' AND c.card_name NOT LIKE '% GX' AND c.card_name NOT LIKE '%Master Ball Holo' AND c.card_name NOT LIKE '%Pokeball Holo'");
-    showCards = true;
-  }
-
-  // Price filter
-  if (af.category === 'price' && af.value !== 'all') {
-    const minPrice = parseInt(af.value);
-    cardWhere.push(`c.price_raw_usd >= ${minPrice}`);
-    showCards = true;
-  }
-
-  // Multi-set filter
-  if (af.category === 'multi' && af.value !== 'all') {
-    const minSets = parseInt(af.value);
-    cardWhere.push(`c.card_name IN (SELECT card_name FROM cards GROUP BY card_name HAVING COUNT(DISTINCT set_code) >= ${minSets})`);
-    groupByCard = true;
-    showCards = true;
-  }
-
-  // Default: show sets
-  if (!showCards && !showSetsSection) showSetsSection = true;
-
-  const el = document.getElementById('filterResults');
-  let html = '';
-
-  // Render sets if applicable
-  if (showSetsSection) {
-    const sw = setWhere.length ? 'WHERE ' + setWhere.join(' AND ') : '';
-    const sets = db.exec(`SELECT set_code, set_name_en, set_name_cn, release_date, card_count, total_value_usd FROM sets s ${sw} ORDER BY release_date DESC`);
-    if (sets.length && sets[0].values.length) {
-      html += `<h3 style="font-size:14px;color:var(--muted);margin-bottom:10px">SETS (${sets[0].values.length})</h3>`;
-      html += `<div class="set-grid" style="margin-bottom:24px">${sets[0].values.map(r => {
-        const [code, name, cn, date, count, value] = r;
-        const valueStr = value ? `$${parseFloat(value).toLocaleString(undefined,{minimumFractionDigits:2})}` : '—';
-        return `<div class="set-card" onclick="openSet('${code}')">
-          <div class="set-name">${esc(name)}</div>
-          <div class="set-cn">${esc(cn||'')}</div>
-          <div class="set-meta">
-            <span>${date}</span>
-            <span>${count} cards</span>
-            <span class="value">${valueStr}</span>
-          </div>
-        </div>`;
-      }).join('')}</div>`;
-    }
-  }
-
-  // Render cards if applicable
-  if (showCards) {
-    const cw = cardWhere.length ? 'WHERE ' + cardWhere.join(' AND ') : '';
-    const countQ = groupByCard
-      ? db.exec(`SELECT COUNT(*) FROM (SELECT c.card_name FROM cards c JOIN sets s ON c.set_code=s.set_code ${cw} GROUP BY c.card_name)`)[0].values[0][0]
-      : db.exec(`SELECT COUNT(*) FROM cards c JOIN sets s ON c.set_code=s.set_code ${cw}`)[0].values[0][0];
-    const totalPages = Math.ceil(countQ / PAGE_SIZE);
-    const offset = (currentPage - 1) * PAGE_SIZE;
-
-    let cards;
-    if (groupByCard) {
-      cards = db.exec(`SELECT c.card_uuid, c.card_name, c.card_number, c.set_code, c.price_raw_usd FROM cards c JOIN sets s ON c.set_code=s.set_code ${cw} GROUP BY c.card_name ORDER BY COUNT(DISTINCT c.set_code) DESC, COALESCE(c.price_raw_usd,0) DESC LIMIT ${PAGE_SIZE} OFFSET ${offset}`);
-    } else {
-      cards = db.exec(`SELECT c.card_uuid, c.card_name, c.card_number, c.set_code, c.price_raw_usd FROM cards c JOIN sets s ON c.set_code=s.set_code ${cw} ORDER BY COALESCE(c.price_raw_usd,0) DESC LIMIT ${PAGE_SIZE} OFFSET ${offset}`);
-    }
-
-    html += `<h3 style="font-size:14px;color:var(--muted);margin-bottom:10px">CARDS (${countQ.toLocaleString()})</h3>`;
-    html += `<div class="card-grid" id="cardGrid"></div>`;
-    html += `<div class="pagination" id="pagination"></div>`;
-    el.innerHTML = html;
-
-    if (!cards.length || !cards[0].values.length) {
-      document.getElementById('cardGrid').innerHTML = '<div class="empty"><p>No cards match this filter</p></div>';
-      return;
-    }
-
-    document.getElementById('cardGrid').innerHTML = cards[0].values.map(r => {
-      const [uuid, name, num, setCode, price] = r;
-      const img = `https://images.pikaqian.com/${setCode}/${uuid}.webp`;
-      const priceStr = price ? `$${parseFloat(price).toLocaleString(undefined,{minimumFractionDigits:2})}` : 'N/A';
-      const priceClass = price ? '' : ' na';
-      return `<div class="card-item" onclick="openCard('${uuid}','${esc(name).replace(/'/g,"\\'")}','${num||''}','${setCode}','${price||''}')">
-        <div class="card-img-wrap">
-          <img class="loading" src="${img}" alt="${esc(name)}" onload="this.classList.remove('loading');this.classList.add('loaded')" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 277%22><rect fill=%22%231a1a24%22 width=%22200%22 height=%22277%22/><text x=%22100%22 y=%22138%22 text-anchor=%22middle%22 fill=%22%23555%22 font-size=%2214%22>No Image</text></svg>';this.classList.remove('loading');this.classList.add('loaded')">
-        </div>
-        <div class="card-info">
-          <div class="name" title="${esc(name)}">${esc(name)}</div>
-          <div class="meta">#${num||'?'} · ${setCode}</div>
-          <div class="price${priceClass}">${priceStr}</div>
-        </div>
-      </div>`;
-    }).join('');
-
-    // Pagination
-    let pag = '';
-    if (totalPages > 1) {
-      pag += `<button ${currentPage===1?'disabled':''} onclick="currentPage=1;renderFilterResults()">«</button>`;
-      pag += `<button ${currentPage===1?'disabled':''} onclick="currentPage--;renderFilterResults()">‹</button>`;
-      const start = Math.max(1, currentPage - 2);
-      const end = Math.min(totalPages, currentPage + 2);
-      for (let i = start; i <= end; i++) {
-        pag += `<button class="${i===currentPage?'active':''}" onclick="currentPage=${i};renderFilterResults()">${i}</button>`;
-      }
-      pag += `<button ${currentPage===totalPages?'disabled':''} onclick="currentPage++;renderFilterResults()">›</button>`;
-      pag += `<button ${currentPage===totalPages?'disabled':''} onclick="currentPage=${totalPages};renderFilterResults()">»</button>`;
-    }
-    document.getElementById('pagination').innerHTML = pag;
-  } else {
-    el.innerHTML = html;
-  }
-}
-
-function openSet(code) {
-  currentView = 'cards';
-  currentSet = code;
-  currentPage = 1;
-  const set = db.exec(`SELECT set_name_en, set_name_cn, release_date, card_count, total_value_usd FROM sets WHERE set_code='${code}'`)[0].values[0];
-  const [name, cn, date, count, value] = set;
-  const valueStr = value ? `$${parseFloat(value).toLocaleString(undefined,{minimumFractionDigits:2})}` : '—';
-
-  let html = `<div class="back-btn" onclick="showSets()">← Back to Sets</div>`;
-  html += `<div class="set-header">
-    <h2>${esc(name)}</h2>
-    <div class="cn">${esc(cn||'')} · ${code}</div>
-    <div class="meta">
-      <span>${date}</span>
-      <span>${count} cards</span>
-      <span style="color:var(--green)">Total value: ${valueStr}</span>
-    </div>
-  </div>`;
-  html += `<div class="sort-bar">
-    <label>Sort:</label>
-    <select id="sortSelect" onchange="currentPage=1;renderCards()">
-      <option value="price_desc">Price: High → Low</option>
-      <option value="price_asc">Price: Low → High</option>
-      <option value="number">Card Number</option>
-      <option value="name">Name</option>
-    </select>
-    <span class="result-count" id="resultCount"></span>
-  </div>`;
-  html += `<div class="card-grid" id="cardGrid"></div>`;
-  html += `<div class="pagination" id="pagination"></div>`;
-  document.getElementById('app').innerHTML = html;
-  renderCards();
-}
-
-function renderCards() {
-  const sort = document.getElementById('sortSelect').value;
-  const sortMap = {
-    price_desc: 'COALESCE(c.price_raw_usd,0) DESC',
-    price_asc: 'CASE WHEN c.price_raw_usd IS NULL THEN 1 ELSE 0 END, c.price_raw_usd ASC',
-    number: 'CAST(c.card_number AS INTEGER)',
-    name: 'c.card_name',
-  };
-
-  const countQ = db.exec(`SELECT COUNT(*) FROM cards c WHERE c.set_code='${currentSet}'`)[0].values[0][0];
-  const totalPages = Math.ceil(countQ / PAGE_SIZE);
-  const offset = (currentPage - 1) * PAGE_SIZE;
-
-  const cards = db.exec(`SELECT c.card_uuid, c.card_name, c.card_number, c.price_raw_usd FROM cards c WHERE c.set_code='${currentSet}' ORDER BY ${sortMap[sort]} LIMIT ${PAGE_SIZE} OFFSET ${offset}`);
-
-  document.getElementById('resultCount').textContent = `${countQ} cards`;
-
-  if (!cards.length || !cards[0].values.length) {
-    document.getElementById('cardGrid').innerHTML = '<div class="empty"><p>No cards found</p></div>';
-    document.getElementById('pagination').innerHTML = '';
-    return;
-  }
-
-  document.getElementById('cardGrid').innerHTML = cards[0].values.map(r => {
-    const [uuid, name, num, price] = r;
-    const img = `https://images.pikaqian.com/${currentSet}/${uuid}.webp`;
-    const priceStr = price ? `$${parseFloat(price).toLocaleString(undefined,{minimumFractionDigits:2})}` : 'N/A';
-    const priceClass = price ? '' : ' na';
-    return `<div class="card-item" onclick="openCard('${uuid}','${esc(name).replace(/'/g,"\\'")}','${num||''}','${currentSet}','${price||''}')">
-      <div class="card-img-wrap">
-        <img class="loading" src="${img}" alt="${esc(name)}" onload="this.classList.remove('loading');this.classList.add('loaded')" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 277%22><rect fill=%22%231a1a24%22 width=%22200%22 height=%22277%22/><text x=%22100%22 y=%22138%22 text-anchor=%22middle%22 fill=%22%23555%22 font-size=%2214%22>No Image</text></svg>';this.classList.remove('loading');this.classList.add('loaded')">
-      </div>
+  const cols=cards[0].columns;
+  document.getElementById('cardGrid').innerHTML=cards[0].values.map(r=>{
+    const o={};cols.forEach((c,i)=>o[c]=r[i]);
+    const img=o.image_url||'';
+    const priceIdx=cols.indexOf('price_usd');
+    const price=priceIdx>=0?r[priceIdx]:null;
+    const priceStr=price?`$${parseFloat(price).toLocaleString(undefined,{minimumFractionDigits:2})}`:'';
+    const lang=o.language||'en';
+    return`<div class="card-item" onclick="openCard('${esc(o.card_id)}')">
+      <div class="card-img">${img?`<img src="${img}.png" onload="this.classList.add('ok')" onerror="this.src='${img}.webp'">`:''}</div>
       <div class="card-info">
-        <div class="name" title="${esc(name)}">${esc(name)}</div>
-        <div class="meta">#${num||'?'}</div>
-        <div class="price${priceClass}">${priceStr}</div>
+        <div class="cname" title="${esc(o.name)}">${esc(o.name)}</div>
+        <div class="cmeta">#${o.local_id||'?'} · ${esc(o.sname||'')} <span class="lang-badge lang-${lang}">${lang}</span></div>
+        ${o.rarity?`<div class="crarity">${esc(o.rarity)}</div>`:''}
+        ${priceStr?`<div class="cprice">${priceStr}</div>`:''}
       </div>
-    </div>`;
-  }).join('');
+    </div>`}).join('');
 
-  // Pagination
-  let pag = '';
-  if (totalPages > 1) {
-    pag += `<button ${currentPage===1?'disabled':''} onclick="currentPage=1;renderCards()">«</button>`;
-    pag += `<button ${currentPage===1?'disabled':''} onclick="currentPage--;renderCards()">‹</button>`;
-    const start = Math.max(1, currentPage - 2);
-    const end = Math.min(totalPages, currentPage + 2);
-    for (let i = start; i <= end; i++) {
-      pag += `<button class="${i===currentPage?'active':''}" onclick="currentPage=${i};renderCards()">${i}</button>`;
-    }
-    pag += `<button ${currentPage===totalPages?'disabled':''} onclick="currentPage++;renderCards()">›</button>`;
-    pag += `<button ${currentPage===totalPages?'disabled':''} onclick="currentPage=${totalPages};renderCards()">»</button>`;
+  let pg='';
+  if(tp>1){
+    pg+=mkPg(1,'«')+mkPg(currentPage-1,'‹');
+    for(let i=Math.max(1,currentPage-2);i<=Math.min(tp,currentPage+2);i++)pg+=mkPg(i,i);
+    pg+=mkPg(currentPage+1,'›')+mkPg(tp,'»');
   }
-  document.getElementById('pagination').innerHTML = pag;
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  document.getElementById('pagination').innerHTML=pg;
 }
+function mkPg(p,t){return`<button ${p<1||p>Math.ceil(99999)?'disabled':''} class="${p===currentPage?'active':''}" onclick="currentPage=${p};renderHome()">${t}</button>`}
 
-function openCard(uuid, name, num, setCode, price) {
-  const card = db.exec(`SELECT c.card_name, c.card_number, c.price_raw_usd, s.set_name_en, s.set_name_cn, s.release_date FROM cards c JOIN sets s ON c.set_code=s.set_code WHERE c.card_uuid='${uuid}'`)[0]?.values[0];
-  const [cname, cnum, cprice, sname, scn, sdate] = card || [name, num, price, '', '', ''];
-  const img = `https://images.pikaqian.com/${setCode}/${uuid}.webp`;
-  const priceStr = cprice ? `$${parseFloat(cprice).toLocaleString(undefined,{minimumFractionDigits:2})}` : 'N/A';
-  const ebayUrl = `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(setCode+' '+cnum)}&_nacat=0&LH_BIN=1&_sop=15`;
+function openCard(id){
+  const c=db.exec(`SELECT c.*, s.name as sname, s.language, s.release_date, s.series
+    FROM cards c JOIN sets s ON c.set_id=s.set_id WHERE c.card_id='${id.replace(/'/g,"''")}'`)[0];
+  if(!c)return;
+  const o={};c.columns.forEach((col,i)=>o[col]=c.values[0][i]);
 
-  document.getElementById('detailPanel').innerHTML = `
-    <button class="detail-close" onclick="closeDetail()">✕</button>
-    <div class="detail-body">
-      <div class="detail-img"><img src="${img}" alt="${esc(cname)}"></div>
-      <div class="detail-info">
-        <h2>${esc(cname)}</h2>
-        <div class="cn">${esc(scn||'')}</div>
-        <div class="field"><span class="label">Set</span><span class="val">${esc(sname)}</span></div>
-        <div class="field"><span class="label">Set Code</span><span class="val">${setCode}</span></div>
-        <div class="field"><span class="label">Card Number</span><span class="val">#${cnum||'?'}</span></div>
-        <div class="field"><span class="label">Release Date</span><span class="val">${sdate}</span></div>
-        <div class="field"><span class="label">Raw Price</span><span class="val price">${priceStr}</span></div>
-        <a class="ebay-link" href="${ebayUrl}" target="_blank" rel="noopener">View on eBay</a>
-      </div>
-    </div>`;
+  const price=db.exec(`SELECT source,price_usd,condition FROM prices WHERE card_id='${id.replace(/'/g,"''")}' ORDER BY price_usd DESC`);
+  const psa=db.exec(`SELECT * FROM psa_grades WHERE card_id='${id.replace(/'/g,"''")}'`);
+
+  let h=`<button class="detail-close" onclick="closeDetail()">✕</button><div class="detail-body">`;
+  h+=`<div class="detail-img">${o.image_url?`<img src="${o.image_url}.png" onerror="this.src='${o.image_url}.webp'">`:''}</div>`;
+  h+=`<div class="detail-info">`;
+  h+=`<h2>${esc(o.name)}</h2>`;
+  h+=mkF('Set',o.sname);
+  h+=mkF('Set ID',o.set_id);
+  h+=mkF('Card Number','#'+(o.local_id||'?'));
+  if(o.rarity)h+=mkF('Rarity',o.rarity);
+  if(o.language)h+=mkF('Language',o.language==='en'?'English':'Simplified Chinese');
+  if(o.release_date)h+=mkF('Release Date',o.release_date);
+  if(o.series)h+=mkF('Series',o.series);
+
+  if(price.values.length){
+    const best=price.values[0];
+    h+=mkF('Market Price',`$${parseFloat(best[1]).toLocaleString(undefined,{minimumFractionDigits:2})}`,true);
+    h+=mkF('Source',best[0]);
+  }
+
+  if(psa.values.length){
+    const p={};psa.columns.forEach((col,i)=>p[col]=psa.values[0][i]);
+    h+=`<div style="margin-top:16px"><div style="font-weight:600;margin-bottom:8px">PSA Grading (${p.total_graded?.toLocaleString()} total)</div>`;
+    h+=`<div class="psa-bar">`;
+    for(let g=1;g<=10;g++){
+      const v=p['grade_'+g]||0;
+      const pct=p.total_graded?(v/p.total_graded*100):0;
+      h+=`<div class="grade-col"><div class="bar" style="height:${Math.max(pct,2)}%"></div><span>${g}</span></div>`;
+    }
+    h+=`</div>`;
+    if(p.gem_mint_pct)h+=`<div style="font-size:12px;color:var(--muted);margin-top:4px">PSA 10: ${p.gem_mint_pct}% · Avg Grade: ${p.average_grade||'N/A'}</div>`;
+    h+=`</div>`;
+  }
+
+  const ebayUrl=`https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent((o.name||'')+' '+(o.local_id||''))}&_nacat=0&LH_BIN=1`;
+  h+=`<a class="ebay-link" href="${ebayUrl}" target="_blank" rel="noopener">View on eBay</a>`;
+  h+=`</div></div>`;
+
+  document.getElementById('detailPanel').innerHTML=h;
   document.getElementById('detailOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  document.body.style.overflow='hidden';
 }
-
-function closeDetail() {
-  document.getElementById('detailOverlay').classList.remove('open');
-  document.body.style.overflow = '';
-}
-
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetail(); });
+function mkF(label,val,isPrice){return`<div class="field"><span class="label">${label}</span><span class="val${isPrice?' price':''}">${esc(String(val))}</span></div>`}
+function closeDetail(){document.getElementById('detailOverlay').classList.remove('open');document.body.style.overflow=''}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDetail()});
 
 // Search
-let searchTimer = null;
-document.getElementById('searchInput').addEventListener('input', e => {
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => {
-    const q = e.target.value.trim();
-    if (q.length < 2) { if (currentView === 'search') showSets(); return; }
-    currentView = 'search';
-    currentSet = null;
-    currentPage = 1;
-    const safe = q.replace(/'/g, "''");
-    renderSearch(safe, q);
-  }, 300);
+let sTimer=null;
+document.getElementById('searchInput').addEventListener('input',e=>{
+  clearTimeout(sTimer);sTimer=setTimeout(()=>{
+    const q=e.target.value.trim();
+    if(q.length<2){if(view==='search')showHome();return}
+    view='search';currentPage=1;renderSearch(q);
+  },300);
 });
 
-function renderSearch(q, displayQ) {
-  if (!displayQ) displayQ = q;
-  const sort = document.getElementById('sortSelect')?.value || 'price_desc';
-  const sortMap = {
-    price_desc: 'COALESCE(price_raw_usd,0) DESC',
-    price_asc: 'CASE WHEN price_raw_usd IS NULL THEN 1 ELSE 0 END, price_raw_usd ASC',
-    name: 'card_name',
-  };
+function renderSearch(q){
+  view='search';const s=q.replace(/'/g,"''");
+  const sort=document.getElementById('sortSel')?.value||'relevance';
+  const sortMap={relevance:'1',price:'p.price_usd DESC',name:'c.name',set:'s.name'};
 
   // Search sets
-  const matchedSets = db.exec(`SELECT set_code, set_name_en, set_name_cn, release_date, card_count, total_value_usd FROM sets WHERE set_name_en LIKE '%${q}%' OR set_name_cn LIKE '%${q}%' OR set_code LIKE '%${q}%' ORDER BY release_date DESC`);
+  const matchedSets=db.exec(`SELECT set_id, name, language, card_count_total FROM sets WHERE name LIKE '%${s}%' OR set_id LIKE '%${s}%' ORDER BY release_date DESC`);
 
-  // Search cards (by name, card number, set code, or set name)
-  const cardWhere = `c.card_name LIKE '%${q}%' OR c.card_number LIKE '%${q}%' OR c.set_code LIKE '%${q}%' OR c.set_name LIKE '%${q}%'`;
-  const cardCount = db.exec(`SELECT COUNT(*) FROM cards c WHERE ${cardWhere}`)[0].values[0][0];
-  const totalPages = Math.ceil(cardCount / PAGE_SIZE);
-  const offset = (currentPage - 1) * PAGE_SIZE;
-  const cards = db.exec(`SELECT c.card_uuid, c.card_name, c.card_number, c.set_code, c.price_raw_usd FROM cards c WHERE ${cardWhere} ORDER BY ${sortMap[sort]} LIMIT ${PAGE_SIZE} OFFSET ${offset}`);
+  // Search cards
+  const cardW=`c.name LIKE '%${s}%' OR c.local_id LIKE '%${s}%' OR c.set_id LIKE '%${s}%' OR s.name LIKE '%${s}%'`;
+  const join=`FROM cards c JOIN sets s ON c.set_id=s.set_id LEFT JOIN prices p ON c.card_id=p.card_id`;
+  const cardCount=db.exec(`SELECT COUNT(DISTINCT c.card_id) ${join} WHERE ${cardW}`)[0].values[0][0];
+  const tp=Math.ceil(cardCount/PS),off=(currentPage-1)*PS;
 
-  const setCount = matchedSets.length ? matchedSets[0].values.length : 0;
-  const totalResults = setCount + cardCount;
+  const orderBy=sort==='price'?'p.price_usd DESC':sort==='name'?'c.name':sort==='set'?'s.name,c.local_id':'1';
+  const cards=db.exec(`SELECT DISTINCT c.card_id, c.name, c.local_id, c.rarity, c.image_url, c.source, s.name as sname, s.language, p.price_usd ${join} WHERE ${cardW} ORDER BY ${orderBy} LIMIT ${PS} OFFSET ${off}`);
 
-  let html = `<div class="back-btn" onclick="document.getElementById('searchInput').value='';showSets()">← Back to Sets</div>`;
-  html += `<div class="set-header"><h2>Search: "${esc(displayQ)}"</h2><div class="meta"><span>${setCount} sets · ${cardCount.toLocaleString()} cards</span></div></div>`;
+  let h=`<div class="back-btn" onclick="document.getElementById('searchInput').value='';showHome()">← Back</div>`;
+  h+=`<div style="margin-bottom:16px"><h2 style="font-size:20px">Search: "${esc(q)}"</h2>`;
+  h+=`<div style="font-size:13px;color:var(--muted);margin-top:4px">${matchedSets.values?matchedSets[0].values.length:0} sets · ${cardCount.toLocaleString()} cards</div></div>`;
 
-  // Render matching sets
-  if (setCount > 0) {
-    html += `<h3 style="font-size:14px;color:var(--muted);margin-bottom:10px">SETS</h3>`;
-    html += `<div class="set-grid" style="margin-bottom:24px">${matchedSets[0].values.map(r => {
-      const [code, name, cn, date, count, value] = r;
-      const valueStr = value ? `$${parseFloat(value).toLocaleString(undefined,{minimumFractionDigits:2})}` : '—';
-      return `<div class="set-card" onclick="openSet('${code}')">
-        <div class="set-name">${esc(name)}</div>
-        <div class="set-cn">${esc(cn||'')}</div>
-        <div class="set-meta">
-          <span>${date}</span>
-          <span>${count} cards</span>
-          <span class="value">${valueStr}</span>
-        </div>
+  // Sets
+  if(matchedSets.length&&matchedSets[0].values.length){
+    h+=`<div class="section-title">SETS</div><div class="set-grid" style="margin-bottom:24px">`;
+    matchedSets[0].values.forEach(r=>{
+      const lang=r[2]||'en';
+      h+=`<div class="set-card" onclick="openSet('${esc(r[0])}')">
+        <div class="sname">${esc(r[1])} <span class="lang-badge lang-${lang}">${lang}</span></div>
+        <div class="smeta"><span>${r[0]}</span><span>${r[3]||'?'} cards</span></div>
       </div>`;
-    }).join('')}</div>`;
+    });
+    h+=`</div>`;
   }
 
-  // Render matching cards
-  html += `<h3 style="font-size:14px;color:var(--muted);margin-bottom:10px">CARDS</h3>`;
-  html += `<div class="sort-bar">
-    <label>Sort:</label>
-    <select id="sortSelect" onchange="currentPage=1;renderSearch('${q}','${esc(displayQ).replace(/'/g,"\\'")}')">
-      <option value="price_desc" ${sort==='price_desc'?'selected':''}>Price: High → Low</option>
-      <option value="price_asc" ${sort==='price_asc'?'selected':''}>Price: Low → High</option>
-      <option value="name" ${sort==='name'?'selected':''}>Name</option>
-    </select>
-    <span class="result-count" id="resultCount">${cardCount.toLocaleString()} cards</span>
-  </div>`;
-  html += `<div class="card-grid" id="cardGrid"></div>`;
-  html += `<div class="pagination" id="pagination"></div>`;
+  // Cards
+  h+=`<div class="section-title">CARDS</div>`;
+  h+=`<div class="sort-bar"><label>Sort:</label><select id="sortSel" onchange="renderSearch('${esc(q).replace(/'/g,"\\'")}')">`;
+  ['relevance','price','name','set'].forEach(v=>{h+=`<option value="${v}" ${sort===v?'selected':''}>${v.charAt(0).toUpperCase()+v.slice(1)}</option>`});
+  h+=`</select><span class="result-count">${cardCount.toLocaleString()} cards</span></div>`;
+  h+=`<div class="card-grid" id="cardGrid"></div><div class="pagination" id="pagination"></div>`;
+  document.getElementById('app').innerHTML=h;
 
-  document.getElementById('app').innerHTML = html;
-
-  if (!cards.length || !cards[0].values.length) {
-    document.getElementById('cardGrid').innerHTML = setCount > 0 ? '' : '<div class="empty"><p>No cards found</p></div>';
-    document.getElementById('pagination').innerHTML = '';
-    return;
+  if(!cards.length||!cards[0].values.length){
+    document.getElementById('cardGrid').innerHTML='<div class="empty"><p>No cards found</p></div>';
+    document.getElementById('pagination').innerHTML='';return;
   }
 
-  document.getElementById('cardGrid').innerHTML = cards[0].values.map(r => {
-    const [uuid, name, num, setCode, price] = r;
-    const img = `https://images.pikaqian.com/${setCode}/${uuid}.webp`;
-    const priceStr = price ? `$${parseFloat(price).toLocaleString(undefined,{minimumFractionDigits:2})}` : 'N/A';
-    const priceClass = price ? '' : ' na';
-    return `<div class="card-item" onclick="openCard('${uuid}','${esc(name).replace(/'/g,"\\'")}','${num||''}','${setCode}','${price||''}')">
-      <div class="card-img-wrap">
-        <img class="loading" src="${img}" alt="${esc(name)}" onload="this.classList.remove('loading');this.classList.add('loaded')" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 277%22><rect fill=%22%231a1a24%22 width=%22200%22 height=%22277%22/><text x=%22100%22 y=%22138%22 text-anchor=%22middle%22 fill=%22%23555%22 font-size=%2214%22>No Image</text></svg>';this.classList.remove('loading');this.classList.add('loaded')">
-      </div>
+  const cols=cards[0].columns;
+  document.getElementById('cardGrid').innerHTML=cards[0].values.map(r=>{
+    const o={};cols.forEach((c,i)=>o[c]=r[i]);
+    const img=o.image_url||'';
+    const price=o.price_usd;
+    const priceStr=price?`$${parseFloat(price).toLocaleString(undefined,{minimumFractionDigits:2})}`:'';
+    const lang=o.language||'en';
+    return`<div class="card-item" onclick="openCard('${esc(o.card_id)}')">
+      <div class="card-img">${img?`<img src="${img}.png" onload="this.classList.add('ok')" onerror="this.src='${img}.webp'">`:''}</div>
       <div class="card-info">
-        <div class="name" title="${esc(name)}">${esc(name)}</div>
-        <div class="meta">#${num||'?'} · ${setCode}</div>
-        <div class="price${priceClass}">${priceStr}</div>
+        <div class="cname" title="${esc(o.name)}">${esc(o.name)}</div>
+        <div class="cmeta">#${o.local_id||'?'} · ${esc(o.sname||'')} <span class="lang-badge lang-${lang}">${lang}</span></div>
+        ${o.rarity?`<div class="crarity">${esc(o.rarity)}</div>`:''}
+        ${priceStr?`<div class="cprice">${priceStr}</div>`:''}
       </div>
-    </div>`;
-  }).join('');
+    </div>`}).join('');
 
-  let pag = '';
-  if (totalPages > 1) {
-    pag += `<button ${currentPage===1?'disabled':''} onclick="currentPage=1;renderSearch('${q}','${esc(displayQ).replace(/'/g,"\\'")}')">«</button>`;
-    pag += `<button ${currentPage===1?'disabled':''} onclick="currentPage--;renderSearch('${q}','${esc(displayQ).replace(/'/g,"\\'")}')">‹</button>`;
-    const start = Math.max(1, currentPage - 2);
-    const end = Math.min(totalPages, currentPage + 2);
-    for (let i = start; i <= end; i++) {
-      pag += `<button class="${i===currentPage?'active':''}" onclick="currentPage=${i};renderSearch('${q}','${esc(displayQ).replace(/'/g,"\\'")}')">${i}</button>`;
-    }
-    pag += `<button ${currentPage===totalPages?'disabled':''} onclick="currentPage++;renderSearch('${q}','${esc(displayQ).replace(/'/g,"\\'")}')">›</button>`;
-    pag += `<button ${currentPage===totalPages?'disabled':''} onclick="currentPage=${totalPages};renderSearch('${q}','${esc(displayQ).replace(/'/g,"\\'")}')">»</button>`;
+  let pg='';
+  if(tp>1){
+    pg+=`<button ${currentPage===1?'disabled':''} onclick="currentPage=1;renderSearch('${esc(q).replace(/'/g,"\\'")}')">«</button>`;
+    pg+=`<button ${currentPage===1?'disabled':''} onclick="currentPage--;renderSearch('${esc(q).replace(/'/g,"\\'")}')">‹</button>`;
+    for(let i=Math.max(1,currentPage-2);i<=Math.min(tp,currentPage+2);i++)
+      pg+=`<button class="${i===currentPage?'active':''}" onclick="currentPage=${i};renderSearch('${esc(q).replace(/'/g,"\\'")}')">${i}</button>`;
+    pg+=`<button ${currentPage===tp?'disabled':''} onclick="currentPage++;renderSearch('${esc(q).replace(/'/g,"\\'")}')">›</button>`;
+    pg+=`<button ${currentPage===tp?'disabled':''} onclick="currentPage=${tp};renderSearch('${esc(q).replace(/'/g,"\\'")}')">»</button>`;
   }
-  document.getElementById('pagination').innerHTML = pag;
+  document.getElementById('pagination').innerHTML=pg;
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
-function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function openSet(setId){
+  view='set';currentPage=1;
+  const s=db.exec(`SELECT * FROM sets WHERE set_id='${setId.replace(/'/g,"''")}'`)[0];
+  if(!s)return;
+  const o={};s.columns.forEach((c,i)=>o[c]=s.values[0][i]);
+
+  const cardCount=db.exec(`SELECT COUNT(*) FROM cards WHERE set_id='${setId.replace(/'/g,"''")}'`)[0].values[0][0];
+
+  let h=`<div class="back-btn" onclick="showHome()">← Back</div>`;
+  h+=`<div style="margin-bottom:20px">`;
+  h+=`<h2 style="font-size:24px">${esc(o.name)} <span class="lang-badge lang-${o.language||'en'}">${o.language||'en'}</span></h2>`;
+  h+=`<div style="font-size:13px;color:var(--muted);margin-top:4px">${o.set_id} · ${o.release_date||'?'} · ${cardCount} cards · Source: ${o.source}</div>`;
+  if(o.logo_url)h+=`<img src="${o.logo_url}" style="height:60px;margin-top:12px">`;
+  h+=`</div>`;
+  h+=`<div class="card-grid" id="cardGrid"></div><div class="pagination" id="pagination"></div>`;
+  document.getElementById('app').innerHTML=h;
+  renderSet(setId);
+}
+function renderSet(setId){
+  const tp=Math.ceil(db.exec(`SELECT COUNT(*) FROM cards WHERE set_id='${setId.replace(/'/g,"''")}'`)[0].values[0][0]/PS);
+  const off=(currentPage-1)*PS;
+  const cards=db.exec(`SELECT c.*, p.price_usd FROM cards c LEFT JOIN prices p ON c.card_id=p.card_id WHERE c.set_id='${setId.replace(/'/g,"''")}' ORDER BY CAST(c.local_id AS INTEGER) LIMIT ${PS} OFFSET ${off}`);
+
+  if(!cards.length||!cards[0].values.length){
+    document.getElementById('cardGrid').innerHTML='<div class="empty"><p>No cards</p></div>';return;
+  }
+
+  const cols=cards[0].columns;
+  document.getElementById('cardGrid').innerHTML=cards[0].values.map(r=>{
+    const o={};cols.forEach((c,i)=>o[c]=r[i]);
+    const img=o.image_url||'';const price=o.price_usd;
+    const priceStr=price?`$${parseFloat(price).toLocaleString(undefined,{minimumFractionDigits:2})}`:'';
+    return`<div class="card-item" onclick="openCard('${esc(o.card_id)}')">
+      <div class="card-img">${img?`<img src="${img}.png" onload="this.classList.add('ok')" onerror="this.src='${img}.webp'">`:''}</div>
+      <div class="card-info">
+        <div class="cname">${esc(o.name)}</div>
+        <div class="cmeta">#${o.local_id||'?'}${o.rarity?' · '+esc(o.rarity):''}</div>
+        ${priceStr?`<div class="cprice">${priceStr}</div>`:''}
+      </div>
+    </div>`}).join('');
+
+  let pg='';
+  if(tp>1){
+    pg+=`<button ${currentPage===1?'disabled':''} onclick="currentPage=1;renderSet('${setId}')">«</button>`;
+    pg+=`<button ${currentPage===1?'disabled':''} onclick="currentPage--;renderSet('${setId}')">‹</button>`;
+    for(let i=Math.max(1,currentPage-2);i<=Math.min(tp,currentPage+2);i++)
+      pg+=`<button class="${i===currentPage?'active':''}" onclick="currentPage=${i};renderSet('${setId}')">${i}</button>`;
+    pg+=`<button ${currentPage===tp?'disabled':''} onclick="currentPage++;renderSet('${setId}')">›</button>`;
+    pg+=`<button ${currentPage===tp?'disabled':''} onclick="currentPage=${tp};renderSet('${setId}')">»</button>`;
+  }
+  document.getElementById('pagination').innerHTML=pg;
+}
 
 init();
 </script>
