@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pokemon TCG Knowledge Base — Simplified Chinese</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f0f13;--card:#1a1a24;--border:#2a2a3a;--text:#e0e0e8;--muted:#888899;--accent:#6366f1;--accent2:#818cf8;--green:#22c55e;--red:#ef4444;--gold:#eab308}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+a{color:var(--accent2);text-decoration:none}
+a:hover{text-decoration:underline}
+
+.header{background:var(--card);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;position:sticky;top:0;z-index:100}
+.header h1{font-size:20px;font-weight:700;white-space:nowrap}
+.header h1 span{color:var(--accent2)}
+.search-box{flex:1;min-width:200px;max-width:480px;position:relative}
+.search-box input{width:100%;padding:10px 14px 10px 38px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;outline:none;transition:border .2s}
+.search-box input:focus{border-color:var(--accent)}
+.search-box::before{content:"🔍";position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;opacity:.5}
+.stats{font-size:13px;color:var(--muted);white-space:nowrap}
+
+.container{max-width:1200px;margin:0 auto;padding:20px}
+
+.tabs{display:flex;gap:4px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:13px;font-weight:500;transition:all .2s}
+.tab:hover{border-color:var(--accent);color:var(--text)}
+.tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+.set-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.set-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:all .2s}
+.set-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 4px 20px rgba(99,102,241,.15)}
+.set-card .set-name{font-weight:600;font-size:15px;margin-bottom:4px}
+.set-card .set-cn{font-size:12px;color:var(--muted);margin-bottom:8px}
+.set-card .set-meta{display:flex;gap:12px;font-size:12px;color:var(--muted)}
+.set-card .set-meta .value{color:var(--green);font-weight:600}
+
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.card-item{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:all .2s}
+.card-item:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card-img-wrap{aspect-ratio:200/277;background:#111;position:relative;overflow:hidden}
+.card-img-wrap img{width:100%;height:100%;object-fit:cover}
+.card-img-wrap img.loading{opacity:0}
+.card-img-wrap img.loaded{opacity:1;transition:opacity .3s}
+.card-info{padding:10px 12px}
+.card-info .name{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-info .meta{font-size:11px;color:var(--muted);margin-top:2px}
+.card-info .price{font-size:14px;font-weight:700;color:var(--green);margin-top:4px}
+.card-info .price.na{color:var(--muted);font-weight:400}
+
+.detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.detail-overlay.open{display:flex}
+.detail-panel{background:var(--card);border:1px solid var(--border);border-radius:16px;max-width:700px;width:100%;max-height:90vh;overflow-y:auto;position:relative}
+.detail-close{position:absolute;top:12px;right:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;width:32px;height:32px;color:var(--text);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;z-index:10}
+.detail-close:hover{border-color:var(--accent)}
+.detail-body{display:flex;gap:24px;padding:24px;flex-wrap:wrap}
+.detail-img{flex:0 0 220px}
+.detail-img img{width:100%;border-radius:12px}
+.detail-info{flex:1;min-width:200px}
+.detail-info h2{font-size:22px;font-weight:700;margin-bottom:4px}
+.detail-info .cn{font-size:14px;color:var(--muted);margin-bottom:12px}
+.detail-info .field{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px}
+.detail-info .field .label{color:var(--muted)}
+.detail-info .field .val{font-weight:600}
+.detail-info .field .val.price{color:var(--green);font-size:18px}
+.detail-info .ebay-link{display:inline-block;margin-top:16px;padding:10px 20px;background:var(--accent);color:#fff;border-radius:8px;font-weight:600;font-size:14px}
+.detail-info .ebay-link:hover{background:var(--accent2);text-decoration:none}
+
+.loading-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;gap:16px}
+.loading-screen .spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-screen p{color:var(--muted);font-size:14px}
+
+.back-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;cursor:pointer;margin-bottom:16px}
+.back-btn:hover{border-color:var(--accent)}
+.set-header{margin-bottom:20px}
+.set-header h2{font-size:24px;font-weight:700}
+.set-header .cn{font-size:14px;color:var(--muted)}
+.set-header .meta{display:flex;gap:16px;font-size:13px;color:var(--muted);margin-top:8px}
+
+.sort-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.sort-bar label{font-size:13px;color:var(--muted)}
+.sort-bar select{background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 10px;font-size:13px}
+.result-count{font-size:13px;color:var(--muted);margin-left:auto}
+
+.empty{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty p{font-size:16px;margin-bottom:8px}
+
+.pagination{display:flex;justify-content:center;gap:8px;margin-top:20px;flex-wrap:wrap}
+.pagination button{padding:8px 14px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);cursor:pointer;font-size:13px}
+.pagination button:hover{border-color:var(--accent)}
+.pagination button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pagination button:disabled{opacity:.4;cursor:default}
+
+@media(max-width:600px){
+  .header{padding:12px 16px}
+  .container{padding:12px}
+  .detail-body{flex-direction:column;padding:16px}
+  .detail-img{flex:none}
+  .set-grid{grid-template-columns:1fr}
+  .card-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Pokemon TCG <span>Knowledge Base</span></h1>
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="Search cards by name... (e.g. Pikachu, Sylveon ex)">
+  </div>
+  <div class="stats" id="stats"></div>
+</div>
+
+<div class="container" id="app">
+  <div class="loading-screen" id="loading">
+    <div class="spinner"></div>
+    <p>Loading database...</p>
+  </div>
+</div>
+
+<div class="detail-overlay" id="detailOverlay" onclick="if(event.target===this)closeDetail()">
+  <div class="detail-panel" id="detailPanel"></div>
+</div>
+
+<script>
+let db = null;
+let currentView = 'sets';
+let currentEra = 'all';
+let currentSet = null;
+let currentPage = 1;
+const PAGE_SIZE = 60;
+
+async function init() {
+  try {
+    const SQL = await initSqlJs({ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${f}` });
+    const resp = await fetch('pokemon_kb.db');
+    const buf = await resp.arrayBuffer();
+    db = new SQL.Database(new Uint8Array(buf));
+    updateStats();
+    showSets();
+  } catch(e) {
+    document.getElementById('loading').innerHTML = `<div class="empty"><p>Failed to load database</p><p style="font-size:13px">${e.message}</p></div>`;
+  }
+}
+
+function updateStats() {
+  const sets = db.exec("SELECT COUNT(*) FROM sets")[0].values[0][0];
+  const cards = db.exec("SELECT COUNT(*) FROM cards")[0].values[0][0];
+  const priced = db.exec("SELECT COUNT(*) FROM cards WHERE price_raw_usd IS NOT NULL")[0].values[0][0];
+  document.getElementById('stats').textContent = `${sets} sets · ${cards.toLocaleString()} cards · ${priced.toLocaleString()} priced`;
+}
+
+function showSets() {
+  currentView = 'sets';
+  currentSet = null;
+  currentPage = 1;
+  const eras = [
+    { id: 'all', label: 'All Sets' },
+    { id: 'sv', label: 'Scarlet & Violet' },
+    { id: 'ss', label: 'Sword & Shield' },
+    { id: 'sm', label: 'Sun & Moon' },
+  ];
+  let html = `<div class="tabs">${eras.map(e => `<div class="tab ${e.id===currentEra?'active':''}" onclick="setEra('${e.id}')">${e.label}</div>`).join('')}</div>`;
+  html += `<div class="set-grid" id="setGrid"></div>`;
+  document.getElementById('app').innerHTML = html;
+  renderSets();
+}
+
+function setEra(era) {
+  currentEra = era;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.tab[onclick="setEra('${era}')"]`).classList.add('active');
+  renderSets();
+}
+
+function renderSets() {
+  let where = '';
+  if (currentEra === 'sv') where = "WHERE release_date >= '2025/01/01'";
+  else if (currentEra === 'ss') where = "WHERE release_date >= '2023/05/01' AND release_date < '2025/01/01'";
+  else if (currentEra === 'sm') where = "WHERE release_date < '2023/05/01'";
+
+  const sets = db.exec(`SELECT set_code, set_name_en, set_name_cn, release_date, card_count, total_value_usd FROM sets ${where} ORDER BY release_date DESC`);
+  if (!sets.length || !sets[0].values.length) {
+    document.getElementById('setGrid').innerHTML = '<div class="empty"><p>No sets found</p></div>';
+    return;
+  }
+  document.getElementById('setGrid').innerHTML = sets[0].values.map(r => {
+    const [code, name, cn, date, count, value] = r;
+    const valueStr = value ? `$${parseFloat(value).toLocaleString(undefined,{minimumFractionDigits:2})}` : '—';
+    return `<div class="set-card" onclick="openSet('${code}')">
+      <div class="set-name">${esc(name)}</div>
+      <div class="set-cn">${esc(cn||'')}</div>
+      <div class="set-meta">
+        <span>${date}</span>
+        <span>${count} cards</span>
+        <span class="value">${valueStr}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openSet(code) {
+  currentView = 'cards';
+  currentSet = code;
+  currentPage = 1;
+  const set = db.exec(`SELECT set_name_en, set_name_cn, release_date, card_count, total_value_usd FROM sets WHERE set_code='${code}'`)[0].values[0];
+  const [name, cn, date, count, value] = set;
+  const valueStr = value ? `$${parseFloat(value).toLocaleString(undefined,{minimumFractionDigits:2})}` : '—';
+
+  let html = `<div class="back-btn" onclick="showSets()">← Back to Sets</div>`;
+  html += `<div class="set-header">
+    <h2>${esc(name)}</h2>
+    <div class="cn">${esc(cn||'')} · ${code}</div>
+    <div class="meta">
+      <span>${date}</span>
+      <span>${count} cards</span>
+      <span style="color:var(--green)">Total value: ${valueStr}</span>
+    </div>
+  </div>`;
+  html += `<div class="sort-bar">
+    <label>Sort:</label>
+    <select id="sortSelect" onchange="currentPage=1;renderCards()">
+      <option value="price_desc">Price: High → Low</option>
+      <option value="price_asc">Price: Low → High</option>
+      <option value="number">Card Number</option>
+      <option value="name">Name</option>
+    </select>
+    <span class="result-count" id="resultCount"></span>
+  </div>`;
+  html += `<div class="card-grid" id="cardGrid"></div>`;
+  html += `<div class="pagination" id="pagination"></div>`;
+  document.getElementById('app').innerHTML = html;
+  renderCards();
+}
+
+function renderCards() {
+  const sort = document.getElementById('sortSelect').value;
+  const sortMap = {
+    price_desc: 'COALESCE(c.price_raw_usd,0) DESC',
+    price_asc: 'CASE WHEN c.price_raw_usd IS NULL THEN 1 ELSE 0 END, c.price_raw_usd ASC',
+    number: 'CAST(c.card_number AS INTEGER)',
+    name: 'c.card_name',
+  };
+
+  const countQ = db.exec(`SELECT COUNT(*) FROM cards c WHERE c.set_code='${currentSet}'`)[0].values[0][0];
+  const totalPages = Math.ceil(countQ / PAGE_SIZE);
+  const offset = (currentPage - 1) * PAGE_SIZE;
+
+  const cards = db.exec(`SELECT c.card_uuid, c.card_name, c.card_number, c.price_raw_usd FROM cards c WHERE c.set_code='${currentSet}' ORDER BY ${sortMap[sort]} LIMIT ${PAGE_SIZE} OFFSET ${offset}`);
+
+  document.getElementById('resultCount').textContent = `${countQ} cards`;
+
+  if (!cards.length || !cards[0].values.length) {
+    document.getElementById('cardGrid').innerHTML = '<div class="empty"><p>No cards found</p></div>';
+    document.getElementById('pagination').innerHTML = '';
+    return;
+  }
+
+  document.getElementById('cardGrid').innerHTML = cards[0].values.map(r => {
+    const [uuid, name, num, price] = r;
+    const img = `https://images.pikaqian.com/${currentSet}/${uuid}.webp`;
+    const priceStr = price ? `$${parseFloat(price).toLocaleString(undefined,{minimumFractionDigits:2})}` : 'N/A';
+    const priceClass = price ? '' : ' na';
+    return `<div class="card-item" onclick="openCard('${uuid}','${esc(name).replace(/'/g,"\\'")}','${num||''}','${currentSet}','${price||''}')">
+      <div class="card-img-wrap">
+        <img class="loading" src="${img}" alt="${esc(name)}" onload="this.classList.remove('loading');this.classList.add('loaded')" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 277%22><rect fill=%22%231a1a24%22 width=%22200%22 height=%22277%22/><text x=%22100%22 y=%22138%22 text-anchor=%22middle%22 fill=%22%23555%22 font-size=%2214%22>No Image</text></svg>';this.classList.remove('loading');this.classList.add('loaded')">
+      </div>
+      <div class="card-info">
+        <div class="name" title="${esc(name)}">${esc(name)}</div>
+        <div class="meta">#${num||'?'}</div>
+        <div class="price${priceClass}">${priceStr}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Pagination
+  let pag = '';
+  if (totalPages > 1) {
+    pag += `<button ${currentPage===1?'disabled':''} onclick="currentPage=1;renderCards()">«</button>`;
+    pag += `<button ${currentPage===1?'disabled':''} onclick="currentPage--;renderCards()">‹</button>`;
+    const start = Math.max(1, currentPage - 2);
+    const end = Math.min(totalPages, currentPage + 2);
+    for (let i = start; i <= end; i++) {
+      pag += `<button class="${i===currentPage?'active':''}" onclick="currentPage=${i};renderCards()">${i}</button>`;
+    }
+    pag += `<button ${currentPage===totalPages?'disabled':''} onclick="currentPage++;renderCards()">›</button>`;
+    pag += `<button ${currentPage===totalPages?'disabled':''} onclick="currentPage=${totalPages};renderCards()">»</button>`;
+  }
+  document.getElementById('pagination').innerHTML = pag;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function openCard(uuid, name, num, setCode, price) {
+  const card = db.exec(`SELECT c.card_name, c.card_number, c.price_raw_usd, s.set_name_en, s.set_name_cn, s.release_date FROM cards c JOIN sets s ON c.set_code=s.set_code WHERE c.card_uuid='${uuid}'`)[0]?.values[0];
+  const [cname, cnum, cprice, sname, scn, sdate] = card || [name, num, price, '', '', ''];
+  const img = `https://images.pikaqian.com/${setCode}/${uuid}.webp`;
+  const priceStr = cprice ? `$${parseFloat(cprice).toLocaleString(undefined,{minimumFractionDigits:2})}` : 'N/A';
+  const ebayUrl = `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(setCode+' '+cnum)}&_nacat=0&LH_BIN=1&_sop=15`;
+
+  document.getElementById('detailPanel').innerHTML = `
+    <button class="detail-close" onclick="closeDetail()">✕</button>
+    <div class="detail-body">
+      <div class="detail-img"><img src="${img}" alt="${esc(cname)}"></div>
+      <div class="detail-info">
+        <h2>${esc(cname)}</h2>
+        <div class="cn">${esc(scn||'')}</div>
+        <div class="field"><span class="label">Set</span><span class="val">${esc(sname)}</span></div>
+        <div class="field"><span class="label">Set Code</span><span class="val">${setCode}</span></div>
+        <div class="field"><span class="label">Card Number</span><span class="val">#${cnum||'?'}</span></div>
+        <div class="field"><span class="label">Release Date</span><span class="val">${sdate}</span></div>
+        <div class="field"><span class="label">Raw Price</span><span class="val price">${priceStr}</span></div>
+        <a class="ebay-link" href="${ebayUrl}" target="_blank" rel="noopener">View on eBay</a>
+      </div>
+    </div>`;
+  document.getElementById('detailOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDetail() {
+  document.getElementById('detailOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetail(); });
+
+// Search
+let searchTimer = null;
+document.getElementById('searchInput').addEventListener('input', e => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    const q = e.target.value.trim();
+    if (q.length < 2) { if (currentView === 'search') showSets(); return; }
+    currentView = 'search';
+    currentSet = null;
+    currentPage = 1;
+    const safe = q.replace(/'/g, "''");
+    const countQ = db.exec(`SELECT COUNT(*) FROM cards WHERE card_name LIKE '%${safe}%'`)[0].values[0][0];
+
+    let html = `<div class="back-btn" onclick="document.getElementById('searchInput').value='';showSets()">← Back to Sets</div>`;
+    html += `<div class="set-header"><h2>Search: "${esc(q)}"</h2><div class="meta"><span>${countQ} results</span></div></div>`;
+    html += `<div class="sort-bar">
+      <label>Sort:</label>
+      <select id="sortSelect" onchange="currentPage=1;renderSearch('${safe}')">
+        <option value="price_desc">Price: High → Low</option>
+        <option value="price_asc">Price: Low → High</option>
+        <option value="name">Name</option>
+      </select>
+      <span class="result-count" id="resultCount"></span>
+    </div>`;
+    html += `<div class="card-grid" id="cardGrid"></div>`;
+    html += `<div class="pagination" id="pagination"></div>`;
+    document.getElementById('app').innerHTML = html;
+    renderSearch(safe);
+  }, 300);
+});
+
+function renderSearch(q) {
+  const sort = document.getElementById('sortSelect').value;
+  const sortMap = {
+    price_desc: 'COALESCE(price_raw_usd,0) DESC',
+    price_asc: 'CASE WHEN price_raw_usd IS NULL THEN 1 ELSE 0 END, price_raw_usd ASC',
+    name: 'card_name',
+  };
+  const countQ = db.exec(`SELECT COUNT(*) FROM cards WHERE card_name LIKE '%${q}%'`)[0].values[0][0];
+  const totalPages = Math.ceil(countQ / PAGE_SIZE);
+  const offset = (currentPage - 1) * PAGE_SIZE;
+
+  const cards = db.exec(`SELECT card_uuid, card_name, card_number, set_code, price_raw_usd FROM cards WHERE card_name LIKE '%${q}%' ORDER BY ${sortMap[sort]} LIMIT ${PAGE_SIZE} OFFSET ${offset}`);
+
+  document.getElementById('resultCount').textContent = `${countQ} results`;
+
+  if (!cards.length || !cards[0].values.length) {
+    document.getElementById('cardGrid').innerHTML = '<div class="empty"><p>No cards found</p></div>';
+    document.getElementById('pagination').innerHTML = '';
+    return;
+  }
+
+  document.getElementById('cardGrid').innerHTML = cards[0].values.map(r => {
+    const [uuid, name, num, setCode, price] = r;
+    const img = `https://images.pikaqian.com/${setCode}/${uuid}.webp`;
+    const priceStr = price ? `$${parseFloat(price).toLocaleString(undefined,{minimumFractionDigits:2})}` : 'N/A';
+    const priceClass = price ? '' : ' na';
+    return `<div class="card-item" onclick="openCard('${uuid}','${esc(name).replace(/'/g,"\\'")}','${num||''}','${setCode}','${price||''}')">
+      <div class="card-img-wrap">
+        <img class="loading" src="${img}" alt="${esc(name)}" onload="this.classList.remove('loading');this.classList.add('loaded')" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 277%22><rect fill=%22%231a1a24%22 width=%22200%22 height=%22277%22/><text x=%22100%22 y=%22138%22 text-anchor=%22middle%22 fill=%22%23555%22 font-size=%2214%22>No Image</text></svg>';this.classList.remove('loading');this.classList.add('loaded')">
+      </div>
+      <div class="card-info">
+        <div class="name" title="${esc(name)}">${esc(name)}</div>
+        <div class="meta">#${num||'?'} · ${setCode}</div>
+        <div class="price${priceClass}">${priceStr}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  let pag = '';
+  if (totalPages > 1) {
+    pag += `<button ${currentPage===1?'disabled':''} onclick="currentPage=1;renderSearch('${q}')">«</button>`;
+    pag += `<button ${currentPage===1?'disabled':''} onclick="currentPage--;renderSearch('${q}')">‹</button>`;
+    const start = Math.max(1, currentPage - 2);
+    const end = Math.min(totalPages, currentPage + 2);
+    for (let i = start; i <= end; i++) {
+      pag += `<button class="${i===currentPage?'active':''}" onclick="currentPage=${i};renderSearch('${q}')">${i}</button>`;
+    }
+    pag += `<button ${currentPage===totalPages?'disabled':''} onclick="currentPage++;renderSearch('${q}')">›</button>`;
+    pag += `<button ${currentPage===totalPages?'disabled':''} onclick="currentPage=${totalPages};renderSearch('${q}')">»</button>`;
+  }
+  document.getElementById('pagination').innerHTML = pag;
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+init();
+</script>
+</body>
+</html>
