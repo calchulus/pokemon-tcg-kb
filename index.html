@@ -23,10 +23,13 @@ a:hover{text-decoration:underline}
 
 .container{max-width:1200px;margin:0 auto;padding:20px}
 
-.tabs{display:flex;gap:4px;margin-bottom:20px;flex-wrap:wrap}
-.tab{padding:8px 16px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:13px;font-weight:500;transition:all .2s}
+.filter-section{margin-bottom:16px}
+.filter-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px;font-weight:600}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}
+.tab{padding:6px 14px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:13px;font-weight:500;transition:all .2s;white-space:nowrap}
 .tab:hover{border-color:var(--accent);color:var(--text)}
 .tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.tab .count{font-size:10px;opacity:.6;margin-left:4px}
 
 .set-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
 .set-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:all .2s}
@@ -130,6 +133,7 @@ let currentView = 'sets';
 let currentEra = 'all';
 let currentSet = null;
 let currentPage = 1;
+let activeFilter = { category: 'era', value: 'all' };
 const PAGE_SIZE = 60;
 
 async function init() {
@@ -156,49 +160,252 @@ function showSets() {
   currentView = 'sets';
   currentSet = null;
   currentPage = 1;
-  const eras = [
-    { id: 'all', label: 'All Sets' },
-    { id: 'sv', label: 'Scarlet & Violet' },
-    { id: 'ss', label: 'Sword & Shield' },
-    { id: 'sm', label: 'Sun & Moon' },
-  ];
-  let html = `<div class="tabs">${eras.map(e => `<div class="tab ${e.id===currentEra?'active':''}" onclick="setEra('${e.id}')">${e.label}</div>`).join('')}</div>`;
-  html += `<div class="set-grid" id="setGrid"></div>`;
-  document.getElementById('app').innerHTML = html;
-  renderSets();
-}
 
-function setEra(era) {
-  currentEra = era;
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelector(`.tab[onclick="setEra('${era}')"]`).classList.add('active');
-  renderSets();
-}
+  // Pre-compute counts for filter tabs
+  const eraCounts = { all: 0 };
+  db.exec("SELECT set_code, release_date FROM sets").values.forEach(r => {
+    eraCounts.all++;
+    const d = r[1];
+    const era = d >= '2025/01/01' ? 'sv' : d >= '2023/05/01' ? 'ss' : 'sm';
+    eraCounts[era] = (eraCounts[era]||0) + 1;
+  });
 
-function renderSets() {
-  let where = '';
-  if (currentEra === 'sv') where = "WHERE release_date >= '2025/01/01'";
-  else if (currentEra === 'ss') where = "WHERE release_date >= '2023/05/01' AND release_date < '2025/01/01'";
-  else if (currentEra === 'sm') where = "WHERE release_date < '2023/05/01'";
-
-  const sets = db.exec(`SELECT set_code, set_name_en, set_name_cn, release_date, card_count, total_value_usd FROM sets ${where} ORDER BY release_date DESC`);
-  if (!sets.length || !sets[0].values.length) {
-    document.getElementById('setGrid').innerHTML = '<div class="empty"><p>No sets found</p></div>';
-    return;
+  const pokemonFamilies = db.exec(`SELECT card_name, COUNT(*) as cnt FROM cards GROUP BY card_name ORDER BY cnt DESC`).values;
+  const topPokemon = [];
+  const seen = new Set();
+  for (const [name, cnt] of pokemonFamilies) {
+    const base = name.replace(/ (ex|VMAX|VSTAR|V|GX|Prime|Legend|Master Ball Holo|Pokeball Holo)$/,'');
+    if (!seen.has(base) && !['Energy','Switch','Professor','Ultra','Nest','Great','Quick','Potion','Boss','Marnie','Escape','Evolution','Rare','Master','Poké','Pokemon','Family','Battle','Colorless','Double','Single','Super','Judge','Youngster','Nemona','Ball','Retrieval','Communication','Research','Avery','Korrina','Tierno','Hau','Cheren','Roxie','Peonia','Marnie\'s','Professor\'s'].includes(base)) {
+      seen.add(base);
+      topPokemon.push({ name: base, count: cnt });
+    }
+    if (topPokemon.length >= 12) break;
   }
-  document.getElementById('setGrid').innerHTML = sets[0].values.map(r => {
-    const [code, name, cn, date, count, value] = r;
-    const valueStr = value ? `$${parseFloat(value).toLocaleString(undefined,{minimumFractionDigits:2})}` : '—';
-    return `<div class="set-card" onclick="openSet('${code}')">
-      <div class="set-name">${esc(name)}</div>
-      <div class="set-cn">${esc(cn||'')}</div>
-      <div class="set-meta">
-        <span>${date}</span>
-        <span>${count} cards</span>
-        <span class="value">${valueStr}</span>
-      </div>
-    </div>`;
-  }).join('');
+
+  const typeCounts = {};
+  db.exec("SELECT card_name FROM cards").values.forEach(([n]) => {
+    if (n.endsWith(' ex')) typeCounts['ex'] = (typeCounts['ex']||0)+1;
+    else if (n.endsWith(' VMAX')) typeCounts['VMAX'] = (typeCounts['VMAX']||0)+1;
+    else if (n.endsWith(' VSTAR')) typeCounts['VSTAR'] = (typeCounts['VSTAR']||0)+1;
+    else if (n.endsWith(' V') && !n.endsWith(' PV')) typeCounts['V'] = (typeCounts['V']||0)+1;
+    else if (n.endsWith(' GX')) typeCounts['GX'] = (typeCounts['GX']||0)+1;
+    else if (n.includes('Master Ball Holo')) typeCounts['Master Ball'] = (typeCounts['Master Ball']||0)+1;
+    else if (n.includes('Pokeball Holo')) typeCounts['Pokeball'] = (typeCounts['Pokeball']||0)+1;
+    else typeCounts['Regular'] = (typeCounts['Regular']||0)+1;
+  });
+
+  const priceRanges = { '500+': 0, '100+': 0, '50+': 0, '10+': 0, '1+': 0 };
+  db.exec("SELECT price_raw_usd FROM cards WHERE price_raw_usd IS NOT NULL").values.forEach(([p]) => {
+    if (p >= 500) priceRanges['500+']++;
+    if (p >= 100) priceRanges['100+']++;
+    if (p >= 50) priceRanges['50+']++;
+    if (p >= 10) priceRanges['10+']++;
+    if (p >= 1) priceRanges['1+']++;
+  });
+
+  const multiSetCounts = {};
+  db.exec("SELECT card_name, COUNT(DISTINCT set_code) as sc FROM cards GROUP BY card_name").values.forEach(([n,c]) => {
+    if (c >= 10) multiSetCounts['10+'] = (multiSetCounts['10+']||0)+1;
+    if (c >= 5) multiSetCounts['5+'] = (multiSetCounts['5+']||0)+1;
+    if (c >= 3) multiSetCounts['3+'] = (multiSetCounts['3+']||0)+1;
+  });
+
+  const af = activeFilter;
+  let html = '';
+
+  // Era filters
+  html += `<div class="filter-section"><div class="filter-label">Era</div><div class="tabs">`;
+  [['all','All',eraCounts.all],['sv','Scarlet & Violet',eraCounts.sv],['ss','Sword & Shield',eraCounts.ss],['sm','Sun & Moon',eraCounts.sm]].forEach(([id,label,cnt]) => {
+    html += `<div class="tab ${af.category==='era'&&af.value===id?'active':''}" onclick="setFilter('era','${id}')">${label}<span class="count">${cnt}</span></div>`;
+  });
+  html += `</div></div>`;
+
+  // Pokemon filters
+  html += `<div class="filter-section"><div class="filter-label">Pokemon</div><div class="tabs">`;
+  html += `<div class="tab ${af.category==='pokemon'&&af.value==='all'?'active':''}" onclick="setFilter('pokemon','all')">All</div>`;
+  topPokemon.forEach(({name, count}) => {
+    html += `<div class="tab ${af.category==='pokemon'&&af.value===name?'active':''}" onclick="setFilter('pokemon','${name}')">${name}<span class="count">${count}</span></div>`;
+  });
+  html += `</div></div>`;
+
+  // Card type filters
+  html += `<div class="filter-section"><div class="filter-label">Card Type</div><div class="tabs">`;
+  html += `<div class="tab ${af.category==='type'&&af.value==='all'?'active':''}" onclick="setFilter('type','all')">All</div>`;
+  [['ex',typeCounts.ex],['V',typeCounts.V],['VMAX',typeCounts.VMAX],['VSTAR',typeCounts.VSTAR],['GX',typeCounts.GX],['Master Ball',typeCounts['Master Ball']],['Pokeball',typeCounts.Pokeball],['Regular',typeCounts.Regular]].forEach(([t,c]) => {
+    if (c) html += `<div class="tab ${af.category==='type'&&af.value===t?'active':''}" onclick="setFilter('type','${t}')">${t}<span class="count">${c}</span></div>`;
+  });
+  html += `</div></div>`;
+
+  // Price filters
+  html += `<div class="filter-section"><div class="filter-label">Price (USD)</div><div class="tabs">`;
+  html += `<div class="tab ${af.category==='price'&&af.value==='all'?'active':''}" onclick="setFilter('price','all')">All</div>`;
+  [['500+','$500+',priceRanges['500+']],['100+','$100+',priceRanges['100+']],['50+','$50+',priceRanges['50+']],['10+','$10+',priceRanges['10+']],['1+','$1+',priceRanges['1+']]].forEach(([v,l,c]) => {
+    if (c) html += `<div class="tab ${af.category==='price'&&af.value===v?'active':''}" onclick="setFilter('price','${v}')">${l}<span class="count">${c}</span></div>`;
+  });
+  html += `</div></div>`;
+
+  // Multi-set filters
+  html += `<div class="filter-section"><div class="filter-label">Multi-Set Appearances</div><div class="tabs">`;
+  html += `<div class="tab ${af.category==='multi'&&af.value==='all'?'active':''}" onclick="setFilter('multi','all')">All</div>`;
+  [['10+','10+ sets',multiSetCounts['10+']],['5+','5+ sets',multiSetCounts['5+']],['3+','3+ sets',multiSetCounts['3+']]].forEach(([v,l,c]) => {
+    if (c) html += `<div class="tab ${af.category==='multi'&&af.value===v?'active':''}" onclick="setFilter('multi','${v}')">${l}<span class="count">${c}</span></div>`;
+  });
+  html += `</div></div>`;
+
+  html += `<div style="height:8px"></div>`;
+  html += `<div id="filterResults"></div>`;
+  document.getElementById('app').innerHTML = html;
+  renderFilterResults();
+}
+
+function setFilter(category, value) {
+  activeFilter = { category, value };
+  currentPage = 1;
+  showSets();
+}
+
+function renderFilterResults() {
+  const af = activeFilter;
+  let cardWhere = [];
+  let setWhere = [];
+  let showCards = false;
+  let showSetsSection = false;
+  let groupByCard = false;
+
+  // Era filter
+  if (af.category === 'era' && af.value !== 'all') {
+    const dateFilter = af.value === 'sv' ? ">= '2025/01/01'" : af.value === 'ss' ? ">= '2023/05/01' AND s.release_date < '2025/01/01'" : "< '2023/05/01'";
+    setWhere.push(`s.release_date ${dateFilter}`);
+    cardWhere.push(`s.release_date ${dateFilter}`);
+    showSetsSection = true;
+  } else if (af.category === 'era' && af.value === 'all') {
+    showSetsSection = true;
+  }
+
+  // Pokemon filter
+  if (af.category === 'pokemon' && af.value !== 'all') {
+    const name = af.value.replace(/'/g, "''");
+    cardWhere.push(`c.card_name LIKE '${name}%'`);
+    showCards = true;
+  }
+
+  // Type filter
+  if (af.category === 'type' && af.value !== 'all') {
+    const t = af.value;
+    if (t === 'ex') cardWhere.push("c.card_name LIKE '% ex'");
+    else if (t === 'VMAX') cardWhere.push("c.card_name LIKE '% VMAX'");
+    else if (t === 'VSTAR') cardWhere.push("c.card_name LIKE '% VSTAR'");
+    else if (t === 'V') cardWhere.push("c.card_name LIKE '% V' AND c.card_name NOT LIKE '% VMAX' AND c.card_name NOT LIKE '% VSTAR'");
+    else if (t === 'GX') cardWhere.push("c.card_name LIKE '% GX'");
+    else if (t === 'Master Ball') cardWhere.push("c.card_name LIKE '%Master Ball Holo'");
+    else if (t === 'Pokeball') cardWhere.push("c.card_name LIKE '%Pokeball Holo'");
+    else if (t === 'Regular') cardWhere.push("c.card_name NOT LIKE '% ex' AND c.card_name NOT LIKE '% VMAX' AND c.card_name NOT LIKE '% VSTAR' AND c.card_name NOT LIKE '% V' AND c.card_name NOT LIKE '% GX' AND c.card_name NOT LIKE '%Master Ball Holo' AND c.card_name NOT LIKE '%Pokeball Holo'");
+    showCards = true;
+  }
+
+  // Price filter
+  if (af.category === 'price' && af.value !== 'all') {
+    const minPrice = parseInt(af.value);
+    cardWhere.push(`c.price_raw_usd >= ${minPrice}`);
+    showCards = true;
+  }
+
+  // Multi-set filter
+  if (af.category === 'multi' && af.value !== 'all') {
+    const minSets = parseInt(af.value);
+    cardWhere.push(`c.card_name IN (SELECT card_name FROM cards GROUP BY card_name HAVING COUNT(DISTINCT set_code) >= ${minSets})`);
+    groupByCard = true;
+    showCards = true;
+  }
+
+  // Default: show sets
+  if (!showCards && !showSetsSection) showSetsSection = true;
+
+  const el = document.getElementById('filterResults');
+  let html = '';
+
+  // Render sets if applicable
+  if (showSetsSection) {
+    const sw = setWhere.length ? 'WHERE ' + setWhere.join(' AND ') : '';
+    const sets = db.exec(`SELECT set_code, set_name_en, set_name_cn, release_date, card_count, total_value_usd FROM sets s ${sw} ORDER BY release_date DESC`);
+    if (sets.length && sets[0].values.length) {
+      html += `<h3 style="font-size:14px;color:var(--muted);margin-bottom:10px">SETS (${sets[0].values.length})</h3>`;
+      html += `<div class="set-grid" style="margin-bottom:24px">${sets[0].values.map(r => {
+        const [code, name, cn, date, count, value] = r;
+        const valueStr = value ? `$${parseFloat(value).toLocaleString(undefined,{minimumFractionDigits:2})}` : '—';
+        return `<div class="set-card" onclick="openSet('${code}')">
+          <div class="set-name">${esc(name)}</div>
+          <div class="set-cn">${esc(cn||'')}</div>
+          <div class="set-meta">
+            <span>${date}</span>
+            <span>${count} cards</span>
+            <span class="value">${valueStr}</span>
+          </div>
+        </div>`;
+      }).join('')}</div>`;
+    }
+  }
+
+  // Render cards if applicable
+  if (showCards) {
+    const cw = cardWhere.length ? 'WHERE ' + cardWhere.join(' AND ') : '';
+    const countQ = groupByCard
+      ? db.exec(`SELECT COUNT(*) FROM (SELECT c.card_name FROM cards c JOIN sets s ON c.set_code=s.set_code ${cw} GROUP BY c.card_name)`)[0].values[0][0]
+      : db.exec(`SELECT COUNT(*) FROM cards c JOIN sets s ON c.set_code=s.set_code ${cw}`)[0].values[0][0];
+    const totalPages = Math.ceil(countQ / PAGE_SIZE);
+    const offset = (currentPage - 1) * PAGE_SIZE;
+
+    let cards;
+    if (groupByCard) {
+      cards = db.exec(`SELECT c.card_uuid, c.card_name, c.card_number, c.set_code, c.price_raw_usd FROM cards c JOIN sets s ON c.set_code=s.set_code ${cw} GROUP BY c.card_name ORDER BY COUNT(DISTINCT c.set_code) DESC, COALESCE(c.price_raw_usd,0) DESC LIMIT ${PAGE_SIZE} OFFSET ${offset}`);
+    } else {
+      cards = db.exec(`SELECT c.card_uuid, c.card_name, c.card_number, c.set_code, c.price_raw_usd FROM cards c JOIN sets s ON c.set_code=s.set_code ${cw} ORDER BY COALESCE(c.price_raw_usd,0) DESC LIMIT ${PAGE_SIZE} OFFSET ${offset}`);
+    }
+
+    html += `<h3 style="font-size:14px;color:var(--muted);margin-bottom:10px">CARDS (${countQ.toLocaleString()})</h3>`;
+    html += `<div class="card-grid" id="cardGrid"></div>`;
+    html += `<div class="pagination" id="pagination"></div>`;
+    el.innerHTML = html;
+
+    if (!cards.length || !cards[0].values.length) {
+      document.getElementById('cardGrid').innerHTML = '<div class="empty"><p>No cards match this filter</p></div>';
+      return;
+    }
+
+    document.getElementById('cardGrid').innerHTML = cards[0].values.map(r => {
+      const [uuid, name, num, setCode, price] = r;
+      const img = `https://images.pikaqian.com/${setCode}/${uuid}.webp`;
+      const priceStr = price ? `$${parseFloat(price).toLocaleString(undefined,{minimumFractionDigits:2})}` : 'N/A';
+      const priceClass = price ? '' : ' na';
+      return `<div class="card-item" onclick="openCard('${uuid}','${esc(name).replace(/'/g,"\\'")}','${num||''}','${setCode}','${price||''}')">
+        <div class="card-img-wrap">
+          <img class="loading" src="${img}" alt="${esc(name)}" onload="this.classList.remove('loading');this.classList.add('loaded')" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 277%22><rect fill=%22%231a1a24%22 width=%22200%22 height=%22277%22/><text x=%22100%22 y=%22138%22 text-anchor=%22middle%22 fill=%22%23555%22 font-size=%2214%22>No Image</text></svg>';this.classList.remove('loading');this.classList.add('loaded')">
+        </div>
+        <div class="card-info">
+          <div class="name" title="${esc(name)}">${esc(name)}</div>
+          <div class="meta">#${num||'?'} · ${setCode}</div>
+          <div class="price${priceClass}">${priceStr}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Pagination
+    let pag = '';
+    if (totalPages > 1) {
+      pag += `<button ${currentPage===1?'disabled':''} onclick="currentPage=1;renderFilterResults()">«</button>`;
+      pag += `<button ${currentPage===1?'disabled':''} onclick="currentPage--;renderFilterResults()">‹</button>`;
+      const start = Math.max(1, currentPage - 2);
+      const end = Math.min(totalPages, currentPage + 2);
+      for (let i = start; i <= end; i++) {
+        pag += `<button class="${i===currentPage?'active':''}" onclick="currentPage=${i};renderFilterResults()">${i}</button>`;
+      }
+      pag += `<button ${currentPage===totalPages?'disabled':''} onclick="currentPage++;renderFilterResults()">›</button>`;
+      pag += `<button ${currentPage===totalPages?'disabled':''} onclick="currentPage=${totalPages};renderFilterResults()">»</button>`;
+    }
+    document.getElementById('pagination').innerHTML = pag;
+  } else {
+    el.innerHTML = html;
+  }
 }
 
 function openSet(code) {
