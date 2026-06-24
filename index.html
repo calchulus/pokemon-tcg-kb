@@ -559,11 +559,12 @@ function renderSearch(q, displayQ) {
   // Search sets
   const matchedSets = db.exec(`SELECT set_code, set_name_en, set_name_cn, release_date, card_count, total_value_usd FROM sets WHERE set_name_en LIKE '%${q}%' OR set_name_cn LIKE '%${q}%' OR set_code LIKE '%${q}%' ORDER BY release_date DESC`);
 
-  // Search cards
-  const cardCount = db.exec(`SELECT COUNT(*) FROM cards WHERE card_name LIKE '%${q}%'`)[0].values[0][0];
+  // Search cards (by name, card number, set code, or set name)
+  const cardWhere = `c.card_name LIKE '%${q}%' OR c.card_number LIKE '%${q}%' OR c.set_code LIKE '%${q}%' OR c.set_name LIKE '%${q}%'`;
+  const cardCount = db.exec(`SELECT COUNT(*) FROM cards c WHERE ${cardWhere}`)[0].values[0][0];
   const totalPages = Math.ceil(cardCount / PAGE_SIZE);
   const offset = (currentPage - 1) * PAGE_SIZE;
-  const cards = db.exec(`SELECT card_uuid, card_name, card_number, set_code, price_raw_usd FROM cards WHERE card_name LIKE '%${q}%' ORDER BY ${sortMap[sort]} LIMIT ${PAGE_SIZE} OFFSET ${offset}`);
+  const cards = db.exec(`SELECT c.card_uuid, c.card_name, c.card_number, c.set_code, c.price_raw_usd FROM cards c WHERE ${cardWhere} ORDER BY ${sortMap[sort]} LIMIT ${PAGE_SIZE} OFFSET ${offset}`);
 
   const setCount = matchedSets.length ? matchedSets[0].values.length : 0;
   const totalResults = setCount + cardCount;
